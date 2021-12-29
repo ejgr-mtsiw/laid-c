@@ -4,7 +4,7 @@ LDFLAGS			:= -L/usr/lib -L/usr/local/lib -lm -lhdf5
 BUILD			:= ./bin
 OBJ_DIR			:= $(BUILD)/objects
 APP_DIR			:= $(BUILD)
-TARGET			:= create-hdf5-dataset
+TARGET			:= laid
 INCLUDE			:= -Iinclude/ -I/usr/local/include/
 SRC			:= $(wildcard src/*.c)
 
