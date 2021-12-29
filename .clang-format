@@ -1,0 +1,10 @@
+﻿---
+BasedOnStyle: WebKit
+AlignAfterOpenBracket: Align
+AlignTrailingComments: 'true'
+ColumnLimit: '80'
+SpaceAfterCStyleCast: 'true'
+TabWidth: '4'
+UseTab: Always
+
+...
