@@ -12,20 +12,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "hdf5.h"
-#include <limits.h>
 #include <math.h>
+#include <string.h>
 
-void print_line(const hsize_t *chunk_dimensions, const unsigned long n_attributes, const int n_bits_for_classes,
+void print_line(const unsigned long n_cols, const unsigned long n_attributes, const int n_bits_for_classes,
 		const unsigned long *buffer) {
-
-	//printf("\n");
-	//printf("Attributes: \n");
 
 	unsigned long column = 0;
 	int classe_bits = 0;
 	int classe = 0;
 
-	for (hsize_t i = 0; i < chunk_dimensions[1]; i++) {
+	for (hsize_t i = 0; i < n_cols; i++) {
 		for (unsigned int j = 0; j < LONG_BITS; j++) {
 			if (column < n_attributes) {
 				if (j % 8 == 0) {
@@ -49,6 +46,61 @@ void print_line(const hsize_t *chunk_dimensions, const unsigned long n_attribute
 
 	printf(" | ");
 	printf("%d\n", classe);
+}
+
+/**
+ * Checks if the arrays have the same attributes
+ */
+int has_same_attributes(unsigned long *a, unsigned long *b, unsigned long n_attributes) {
+
+	// Number of longs filled only with attributes
+	int n_longs = n_attributes / LONG_BITS;
+
+	int i = 0;
+	// We only have attributes here so we can fast check
+	for (i = 0; i < n_longs - 1; i++) {
+		if (a[i] != b[i]) {
+			return 0;
+		}
+	}
+
+	// Check the remaining attributes one by one
+	int remaining_attributes = n_attributes - (n_longs * LONG_BITS);
+
+	for (i = 1; i <= remaining_attributes; i++) {
+		if (CHECK_BIT(a[n_longs], LONG_BITS-i) != CHECK_BIT(b[n_longs], LONG_BITS-i)) {
+			return 0;
+		}
+	}
+
+	// Every attribute is the same
+	return 1;
+}
+
+/**
+ * Checks if the arrays have the same class
+ */
+int has_same_class(const unsigned long *a, const unsigned long *b, const unsigned long n_attributes,
+		int n_bits_for_classes) {
+	// Number of longs filled only with attributes
+	int n_longs = n_attributes / LONG_BITS;
+
+	// Check how many attributes remain
+	int remaining_attributes = n_attributes - (n_longs * LONG_BITS);
+
+	// CLass starts on this bit
+	int class_start = LONG_BITS - remaining_attributes;
+
+	// Check the bits after the attributes
+	for (int i = 1; i <= n_bits_for_classes; i++) {
+		if (CHECK_BIT(a[n_longs], class_start - i) != CHECK_BIT(b[n_longs], class_start - i)) {
+			// Distinct classes
+			return 0;
+		}
+	}
+
+	// They have the same class
+	return 1;
 }
 
 /**
@@ -85,6 +137,7 @@ int main(int argc, char **argv) {
 	 * In memory dataspace identifier
 	 */
 	hid_t memory_space_id = 0;
+
 	/**
 	 * Store the result of operations
 	 */
@@ -107,7 +160,8 @@ int main(int argc, char **argv) {
 	/**
 	 * Full dataset in memory
 	 */
-	//unsigned long *dataset = NULL;
+	unsigned long *full_dataset = NULL;
+
 	// Parse command line arguments
 	if (read_args(argc, argv, &args) == READ_CL_ARGS_NOK) {
 		return EXIT_FAILURE;
@@ -166,7 +220,7 @@ int main(int argc, char **argv) {
 	fprintf(stdout, "n_cols = %lu\n", n_cols);
 
 	// Allocate main buffer
-	//dataset = (unsigned long*) malloc(sizeof(unsigned long) * n_observations * n_cols);
+	full_dataset = (unsigned long*) malloc(sizeof(unsigned long) * n_observations * n_cols);
 
 	// Get creation properties list.
 	property_list_id = H5Dget_create_plist(dataset_id);
@@ -179,7 +233,7 @@ int main(int argc, char **argv) {
 				(unsigned long) (chunk_dimensions[1]));
 
 		// Allocate chunk buffer
-		buffer = (unsigned long*) malloc(sizeof(unsigned long) * chunk_dimensions[0]);
+		buffer = (unsigned long*) malloc(sizeof(unsigned long) * chunk_dimensions[1]);
 
 		/*
 		 * Define the memory space to read a chunk.
@@ -192,26 +246,76 @@ int main(int argc, char **argv) {
 		hsize_t offset[2] = { 0, 0 };
 		hsize_t count[2] = { chunk_dimensions[0], chunk_dimensions[1] };
 
+		unsigned long *first = NULL;
+		unsigned long *last = NULL;
+
+		// How many entries have the same attributes but different classes?
+		int inconsistency_level = 0;
+
 		for (hsize_t line = 0; line < dataset_dimensions[0]; line++) {
 
 			offset[0] = line;
 
 			H5Sselect_hyperslab(dataset_space_id, H5S_SELECT_SET, offset, NULL, count, NULL);
 
-			/*
-			 * Read chunk back and display.
-			 */
+			// Read chunk back
 			H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id, dataset_space_id, H5P_DEFAULT, buffer);
 
-			print_line(chunk_dimensions, n_attributes, n_bits_for_classes, buffer);
+			// Print line
+			//print_line(n_cols, n_attributes, n_bits_for_classes, buffer);
 
 			// Store in main dataset
+			int found = 0;
+			if (first != NULL) {
+				for (unsigned long *current = first; current <= last; current += n_cols) {
+					if (has_same_attributes(buffer, current, n_attributes)) {
+						// Check class
+						if (has_same_class(buffer, current, n_attributes, n_bits_for_classes)) {
+							// It's a duplicate
+							found = true;
+							fprintf(stdout, "Duplicate!\n");
+							print_line(chunk_dimensions[1], n_attributes, n_bits_for_classes, buffer);
+							print_line(chunk_dimensions[1], n_attributes, n_bits_for_classes, current);
+							break;
+						} else {
+							// It's an inconsistent observation
+							inconsistency_level++;
+							fprintf(stdout, "Inconsistency!\n");
+							print_line(chunk_dimensions[1], n_attributes, n_bits_for_classes, buffer);
+							print_line(chunk_dimensions[1], n_attributes, n_bits_for_classes, current);
+						}
+					}
+				}
+			}
+
+			if (!found) {
+				if (first == NULL) {
+					first = full_dataset;
+				}
+
+				if (last == NULL) {
+					last = full_dataset;
+				} else {
+					last += n_cols;
+				}
+
+				//TODO:Add jnsq
+
+				memcpy(last, buffer, chunk_dimensions[1] * sizeof(unsigned long));
+			}
 		}
+
+		/*
+		 for (unsigned long i = 0; i < n_observations; i++) {
+		 print_line(chunk_dimensions[1], n_attributes, n_bits_for_classes, full_dataset + i * n_cols);
+		 }
+		 */
 
 		/*
 		 * Close/release resources.
 		 */
 		free(buffer);
+		free(full_dataset);
 		H5Sclose(memory_space_id);
 	}
 
