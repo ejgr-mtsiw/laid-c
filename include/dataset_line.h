@@ -13,6 +13,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#define DATASET_LINE_DISTINCT 0
+#define DATASET_LINE_DUPLICATE 1
+#define DATASET_LINE_INCONSISTENT 2
+
+/**
+ * Stores info for one line of the dataset
+ */
 typedef struct dataset_line {
 	/**
 	 * The class of this line
@@ -40,7 +47,7 @@ unsigned int get_class(const unsigned long *buffer, const unsigned long n_attrib
 /**
  * Copies one dataset_line info to another
  */
-void dataset_line_copy(dataset_line *to, const dataset_line *from, const unsigned long n_attributes);
+void dataset_line_copy(dataset_line *to, const dataset_line *from);
 
 /**
  * Replaces the class bits with jnsq bits

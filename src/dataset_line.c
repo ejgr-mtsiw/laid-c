@@ -39,17 +39,11 @@ unsigned int get_class(const unsigned long *buffer, const unsigned long n_attrib
 /**
  * Copies one dataset_line info to another
  */
-void dataset_line_copy(dataset_line *to, const dataset_line *from, const unsigned long n_attributes) {
-
-	// Number of longs filled only with attributes
-	int n_longs = n_attributes / LONG_BITS + (n_attributes % LONG_BITS != 0);
-
-	// Number of bytes to copy
-	size_t data_size = sizeof(unsigned long) * n_longs;
+void dataset_line_copy(dataset_line *to, const dataset_line *from) {
 
 	to->class_id = from->class_id;
 	to->inconsistency = from->inconsistency;
-	memcpy(to->data, from->data, data_size);
+	to->data = from->data;
 }
 
 /**
