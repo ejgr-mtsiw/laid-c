@@ -19,19 +19,10 @@ unsigned int get_class(const unsigned long *buffer, const unsigned long n_attrib
 	// Check how many attributes remain
 	int remaining_attributes = n_attributes % LONG_BITS;
 
-	// CLass starts after this bit
-	int class_start = LONG_BITS - remaining_attributes;
+	// Class starts here
+	int at = LONG_BITS - remaining_attributes - n_bits_for_classes;
 
-	unsigned int class_id = 0;
-
-	// Check the bits after the attributes
-	for (unsigned int i = 1; i <= n_bits_for_classes; i++) {
-		class_id <<= 1;
-
-		if (CHECK_BIT(buffer[n_longs], class_start - i)) {
-			class_id |= 1;
-		}
-	}
+	unsigned int class_id = (unsigned int) get_bits(buffer[n_longs], at, n_bits_for_classes);
 
 	return class_id;
 }
@@ -65,7 +56,7 @@ void set_jnsq(dataset_line *new_line, const unsigned long n_attributes, const un
 
 	unsigned long last_long = new_line->data[n_longs];
 
-	last_long = setbits(last_long, new_line->inconsistency, jnsq_start, bits_for_jnsq);
+	last_long = set_bits(last_long, new_line->inconsistency, jnsq_start, bits_for_jnsq);
 
 	new_line->data[n_longs] = last_long;
 }
