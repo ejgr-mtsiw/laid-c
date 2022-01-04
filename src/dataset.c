@@ -11,7 +11,7 @@
 /**
  * Prepares dataset
  */
-void setup_dataset(const hid_t dataset_id, dataset *dataset) {
+int setup_dataset(const hid_t dataset_id, dataset *dataset) {
 	dataset->data = NULL;
 	dataset->last = NULL;
 
@@ -29,6 +29,11 @@ void setup_dataset(const hid_t dataset_id, dataset *dataset) {
 
 	// Allocate main buffer
 	dataset->data = (unsigned long*) malloc(sizeof(unsigned long) * dataset->dimensions[0] * dataset->dimensions[1]);
+	if (dataset->data == NULL){
+		return ERROR_ALLOCATING_DATASET_DATA;
+	}
+
+	return OK;
 }
 
 /**

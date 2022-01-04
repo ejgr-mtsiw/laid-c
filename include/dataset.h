@@ -15,8 +15,12 @@
 #include <math.h>
 #include <string.h>
 
+#define OK 0
+
 #define DATASET_VALID_DIMENSIONS 0
 #define DATASET_INVALID_DIMENSIONS 1
+
+#define ERROR_ALLOCATING_DATASET_DATA 1
 
 /**
  * Number of ranks for data
@@ -42,7 +46,7 @@ typedef struct dataset {
 /**
  * Prepares dataset
  */
-void setup_dataset(const hid_t dataset_id, dataset *dataset);
+int setup_dataset(const hid_t dataset_id, dataset *dataset);
 
 /**
  * Reads the value of one attribute from the dataset

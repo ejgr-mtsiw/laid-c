@@ -65,7 +65,10 @@ int main(int argc, char **argv) {
 	}
 	fprintf(stdout, " - Dataset opened.\n");
 
-	setup_dataset(dataset_id, &dataset);
+	if (setup_dataset(dataset_id, &dataset) == ERROR_ALLOCATING_DATASET_DATA) {
+		fprintf(stderr, "Error allocating dataset data!");
+		return EXIT_FAILURE;
+	}
 
 	setup_dataset_lines(&dataset_lines, dataset.n_observations);
 
