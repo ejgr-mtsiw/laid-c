@@ -149,18 +149,22 @@ unsigned int get_class(const unsigned long *line) {
 /**
  * Prints a line to stream
  */
-void print_line(FILE *stream, const unsigned long *line) {
+void print_line(FILE *stream, const unsigned long *line, const char extra_bits) {
 
 	// Current attribute
-	unsigned long columns_to_write = n_attributes + n_bits_for_class;
+	unsigned long columns_to_write = n_attributes;
+
+	if (extra_bits == 1) {
+		columns_to_write += n_bits_for_class;
+	}
 
 	for (unsigned int i = 0; i < n_longs && columns_to_write > 0; i++) {
-		for (unsigned int j = 1; j <= LONG_BITS && columns_to_write > 0; j++) {
+		for (int j = LONG_BITS - 1; j >= 0 && columns_to_write > 0; j--) {
 			if (j % 8 == 0) {
 				fprintf(stream, " ");
 			}
 
-			fprintf(stream, "%d", BIT_CHECK(line[i], LONG_BITS - j));
+			fprintf(stream, "%d", BIT_CHECK(line[i], j));
 
 			columns_to_write--;
 		}
@@ -178,13 +182,14 @@ void print_line(FILE *stream, const unsigned long *line) {
 /**
  * Prints the whole dataset
  */
-void print_dataset(FILE *stream, unsigned long *dataset, const char *title) {
+void print_dataset(FILE *stream, const char *title, unsigned long *dataset,
+		const char extra_bits) {
 
 	fprintf(stream, "%s\n", title);
 
 	unsigned long *line = dataset;
 	for (unsigned long i = 0; i < n_observations; i++) {
-		print_line(stream, line);
+		print_line(stream, line, extra_bits);
 		fprintf(stream, "\n");
 		NEXT(line);
 
@@ -322,12 +327,12 @@ unsigned long add_jnsqs(unsigned long *dataset) {
  * Removes duplicated lines from the dataset.
  * Assumes the dataset is ordered
  */
-int remove_duplicates(unsigned long *dataset) {
+unsigned long remove_duplicates(unsigned long *dataset) {
 
 	unsigned long *line = dataset;
 	unsigned long *last = line;
 
-	unsigned long n_uniques = 0;
+	unsigned long n_uniques = 1;
 
 	for (unsigned long i = 0; i < n_observations - 1; i++) {
 		NEXT(line);
@@ -341,7 +346,7 @@ int remove_duplicates(unsigned long *dataset) {
 	}
 
 	// Update number of unique observations
-	n_observations = n_uniques + 1;
+	n_observations = n_uniques;
 	return n_observations;
 }
 
@@ -370,5 +375,130 @@ void fill_class_arrays(unsigned long *dataset, unsigned long *n_items_per_class,
 		n_items_per_class[clas]++;
 
 		NEXT(line);
+	}
+}
+
+/**
+ * Calculates and adds the current lines cost to the cost array
+ */
+void increase_cost_line(const unsigned long *a, const unsigned long *b,
+		unsigned long *cost) {
+
+	// Current attribute
+	unsigned long c = 0;
+
+	unsigned long xored = 0;
+
+	for (unsigned int n = 0; n < n_longs && c < n_attributes; n++) {
+		xored = a[n] ^ b[n];
+		for (int bit = LONG_BITS - 1; c < n_attributes && bit >= 0; bit--) {
+			if (xored & mask_table[bit]) {
+				// Disagreement
+				// Add to cost
+				cost[c]++;
+			}
+			c++;
+		}
+	}
+}
+
+/**
+ * Calculates the cost of the full (virtual) disjoint matrix
+ */
+void calculate_initial_cost(unsigned long **observations_per_class,
+		const unsigned long *n_items_per_class, unsigned long *cost) {
+
+	unsigned int i, j;
+	unsigned long n_i, n_j;
+
+	for (i = 0; i < n_classes - 1; i++) {
+		for (j = i + 1; j < n_classes; j++) {
+
+			for (n_i = i * n_classes;
+					n_i < i * n_classes + n_items_per_class[i]; n_i++) {
+
+				for (n_j = j * n_classes;
+						n_j < j * n_classes + n_items_per_class[j]; n_j++) {
+
+					increase_cost_line(observations_per_class[n_i],
+							observations_per_class[n_j], cost);
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Calculates the cost of the attributes that aren't blacklisted (removed)
+ * and subtracts the cost from the cost matrix
+ */
+void decrease_cost_line(const unsigned long *a, const unsigned long *b,
+		const unsigned long attribute_to_blacklist,
+		const unsigned char *blacklist, unsigned long *cost) {
+
+	unsigned int n = attribute_to_blacklist / LONG_BITS;
+	unsigned int r = LONG_BITS - 1 - attribute_to_blacklist % LONG_BITS;
+
+	// Current attribute
+	unsigned long c = 0;
+
+	unsigned long xored = a[n] ^ b[n];
+
+	if (xored & mask_table[r]) {
+		// These lines contributed to the blacklisted attribute
+		// Remove them from the cost array
+
+		c = 0;
+
+		for (unsigned int n = 0; n < n_longs && c < n_attributes; n++) {
+
+			xored = a[n] ^ b[n];
+
+			for (int bit = LONG_BITS - 1; c < n_attributes && bit >= 0; bit--) {
+
+				if ((blacklist[c] == 0) && (xored & mask_table[bit])) {
+					// Disagreement
+					// Remove from cost
+
+					// TODO: this if shouldn't be necessary
+					// but I'm getting negative values here...
+					if (cost[c] > 0) {
+						cost[c]--;
+					}
+				}
+				c++;
+			}
+		}
+	}
+}
+
+/**
+ *  We don't want to build the full disjoint matrix
+ *  So we check again which line combinations contributed to the
+ *  blacklisted attribute and remove their contribution from the cost array
+ */
+void decrease_cost_blacklisted_attribute(unsigned long **observations_per_class,
+		const unsigned long *n_items_per_class,
+		const unsigned long attribute_to_blacklist,
+		const unsigned char *blacklist, unsigned long *cost) {
+
+	unsigned int i, j;
+	unsigned long n_i, n_j;
+
+	for (i = 0; i < n_classes - 1; i++) {
+		for (j = i + 1; j < n_classes; j++) {
+
+			for (n_i = i * n_classes;
+					n_i < i * n_classes + n_items_per_class[i]; n_i++) {
+
+				for (n_j = j * n_classes;
+						n_j < j * n_classes + n_items_per_class[j]; n_j++) {
+
+					decrease_cost_line(observations_per_class[n_i],
+							observations_per_class[n_j], attribute_to_blacklist,
+							blacklist, cost);
+				}
+			}
+		}
 	}
 }

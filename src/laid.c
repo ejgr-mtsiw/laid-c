@@ -6,6 +6,7 @@
  ============================================================================
  */
 
+//#define DEBUG
 #include "clargs.h"
 #include "bit_utils.h"
 #include "dataset.h"
@@ -42,10 +43,23 @@ int main(int argc, char **argv) {
 	 * Array that stores the number of observations for each class
 	 */
 	unsigned long *n_items_per_class = NULL;
+
 	/**
 	 * Matrix that stores the list of observations per class
 	 */
 	unsigned long **observations_per_class = NULL;
+
+	/**
+	 * Array to store the costs for each atribute
+	 */
+	unsigned long *cost = NULL;
+
+	/**
+	 * Array to store the solution attributes
+	 * Also works as a sort of blacklist: every attribute that's part
+	 * of the solution is ignored in the next round of calculating costs
+	 */
+	unsigned char *solution = NULL;
 
 	// Parse command line arguments
 	if (read_args(argc, argv, &args) == READ_CL_ARGS_NOK) {
@@ -94,16 +108,19 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	print_dataset(stdout, dataset, "Initial data");
+	DEBUG_PRINT(stdout, "Initial data", dataset, WITH_EXTRA_BITS)
 
 	// Sort dataset
 	qsort(dataset, n_observations, n_longs * sizeof(unsigned long),
 			compare_lines);
-	print_dataset(stdout, dataset, "Sorted data");
+
+	DEBUG_PRINT(stdout, "Sorted data", dataset, WITH_EXTRA_BITS)
 
 	// remove duplicates
 	remove_duplicates(dataset);
-	print_dataset(stdout, dataset, "Removed duplicates");
+	fprintf(stdout, "- %lu unique observations.\n", n_observations);
+
+	DEBUG_PRINT(stdout, "Removed duplicates", dataset, WITH_EXTRA_BITS)
 
 	// FIll class arrays
 	n_items_per_class = (unsigned long*) calloc(n_classes,
@@ -113,8 +130,8 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	// TODO: replace by pointers so each class has n items
-	// Right now we waste half the matrix space
+	// TODO: should we replace the static matrix by pointers so each
+	// class has n items? Right now we waste at least half the matrix space
 	observations_per_class = (unsigned long**) calloc(
 			n_classes * n_observations, sizeof(unsigned long*));
 
@@ -128,204 +145,125 @@ int main(int argc, char **argv) {
 	unsigned long max_jnsq = add_jnsqs(dataset);
 	fprintf(stdout, "Max JNSQ: %lu\n", max_jnsq);
 
-	// If we use more than n_bits_for_jnsq we're wasting space
-	// TODO: move bits to the left to remove empty column
-	// or write JNSQs backwards so the zero column(s) stay to the right/end
-	// of the line and can be ignored
-	unsigned int n_bits_for_jnsq = ceil(log2(max_jnsq + 1));
-
 	// Update number of attributes to include the new JNSQs
 	if (max_jnsq > 0) {
 		n_attributes += n_bits_for_class;
+
+		// If we use more than n_bits_for_jnsq we're wasting space
+		// TODO: move bits to the left to remove empty column
+		// or write JNSQs backwards so the zero column(s) stay to the right/end
+		// of the line and can be ignored
+		unsigned int n_bits_for_jnsq = ceil(log2(max_jnsq + 1));
 
 		fprintf(stdout, "Wasted %d columns on jnsq!\n",
 				n_bits_for_class - n_bits_for_jnsq);
 	}
 
-	print_dataset(stdout, dataset, "Data + jnsq");
+	DEBUG_PRINT(stdout, "Data + jnsq\n", dataset, WITHOUT_EXTRA_BITS)
 
 	// Do LAD
 
-	// Calculate cost array
+	// Allocate cost array
 
-	// Compare the lines of one class with all the others and get the number
-	// of disagreements for each attribute.
-	// Store the disagreement in the cost array.
-	unsigned long *cost = calloc(n_attributes, sizeof(long));
+	cost = calloc(n_attributes, sizeof(long));
 	if (cost == NULL) {
 		fprintf(stderr, "Error allocating cost array\n");
 		return EXIT_FAILURE;
 	}
 
-	// Pointer to the line of class X
-	unsigned long *a = NULL;
+	/**
+	 * Allocate solution/blacklist array
+	 */
+	solution = calloc(n_attributes, sizeof(unsigned char));
 
-	// Pointer to the line of class Y
-	unsigned long *b = NULL;
-
-	unsigned long current_attribute = 0;
-
-	char *blacklist = calloc(n_attributes, sizeof(char));
+	// Compare the lines of one class with all the others and get the number
+	// of disagreements for each attribute.
+	// Store the disagreement in the cost array.
 
 	// Calculate initial cost
-	for (unsigned int i = 0; i < n_classes - 1; i++) {
-		for (unsigned int j = i + 1; j < n_classes; j++) {
+	calculate_initial_cost(observations_per_class, n_items_per_class, cost);
 
-			for (unsigned long k = 0; k < n_items_per_class[i]; k++) {
+	printf("Initial cost : ");
 
-				a = observations_per_class[i * n_classes + k];
+	for (unsigned long i = 0; i < n_attributes; i++) {
+		fprintf(stdout, "%lu ", cost[i]);
 
-				for (unsigned long l = 0; l < n_items_per_class[j]; l++) {
-
-					b = observations_per_class[j * n_classes + l];
-
-					current_attribute = 0;
-
-					for (unsigned int m = 0;
-							m < n_longs && current_attribute < n_attributes;
-							m++) {
-						for (int n = LONG_BITS - 1;
-								n >= 0 && current_attribute < n_attributes;
-								n--) {
-
-							if (BIT_CHECK(a[m],n) != BIT_CHECK(b[m], n)) {
-								// Disagreement
-								// Add to cost
-								cost[current_attribute]++;
-							}
-
-							current_attribute++;
-						}
-					}
-					/*
-					 printf("Doing %c[%lu] [", letras[i], k);
-					 print_line(stdout, a);
-					 printf("] x %c[%lu] [ ", letras[j], l);
-					 print_line(stdout, b);
-					 printf("] : ");
-
-					 for (unsigned long i = 0; i < n_attributes; i++) {
-					 fprintf(stdout, "%lu ", cost[i]);
-					 }
-					 fprintf(stdout, "\n");
-					 */
-				}
-			}
+		if (n_attributes > 20 && i == 9) {
+			//skip
+			printf(" ... ");
+			i = n_attributes - 10;
 		}
 	}
+	fprintf(stdout, "\n");
 
-//	printf("Initial cost : ");
-//
-//	for (unsigned long i = 0; i < n_attributes; i++) {
-//		fprintf(stdout, "%lu ", cost[i]);
-//	}
-//	fprintf(stdout, "\n");
-
+	/**
+	 * Max cost in the array.
+	 * Program will end when this is 0
+	 */
 	unsigned long max_cost = 0;
-	unsigned long to_blacklist = 0;
+
+	/**
+	 * Attribute to add to blacklist/solution in this round
+	 * It's the attribute with the highest cost
+	 */
+	unsigned long attribute_to_blacklist = 0;
 
 	do {
+
+		// Select attribute to blacklist / add to solution
 		max_cost = 0;
-		to_blacklist = 0;
+		attribute_to_blacklist = 0;
 
 		for (unsigned long i = 0; i < n_attributes; i++) {
 			if (cost[i] > max_cost) {
 				max_cost = cost[i];
-				to_blacklist = i;
+				attribute_to_blacklist = i;
 			}
 		}
 
 		if (max_cost == 0) {
-			// Nothing else to do here
+			// Nothing else to do here: we have a solution that covers the
+			// full disjoint matrix
 			break;
 		}
 
-		// blacklist max_cost
-		blacklist[to_blacklist] = 1;
-		cost[to_blacklist] = 0;
+		solution[attribute_to_blacklist] = 1;
+		cost[attribute_to_blacklist] = 0;
 
-		unsigned int n_to_blacklist = to_blacklist / LONG_BITS;
-		unsigned int r_to_blacklist = LONG_BITS - 1 - to_blacklist % LONG_BITS;
+		printf("Blacklisted: %lu\n", attribute_to_blacklist);
 
-		// remove lines that have this attribute set
-		// We don't want to build the full disjoint matrix
-		// So we check again which line combinations contributed to the
-		// blacklisted attribute and remote their contribution from the cost
-		//array
+		// Calculate the cost of all the lines in the disjoint matrix that had
+		// the blacklisted atribute set, and subtract it from the current cost
+		decrease_cost_blacklisted_attribute(observations_per_class,
+				n_items_per_class, attribute_to_blacklist, solution, cost);
 
-		for (unsigned int i = 0; i < n_classes - 1; i++) {
-			for (unsigned int j = i + 1; j < n_classes; j++) {
+		printf("Current cost : ");
 
-				for (unsigned long k = 0; k < n_items_per_class[i]; k++) {
+		for (unsigned long i = 0; i < n_attributes; i++) {
+			fprintf(stdout, "%lu ", cost[i]);
 
-					a = observations_per_class[i * n_classes + k];
-					if (a == NULL) {
-						continue;
-					}
-
-					for (unsigned long l = 0; l < n_items_per_class[j]; l++) {
-
-						b = observations_per_class[j * n_classes + l];
-						if (b == NULL) {
-							continue;
-						}
-
-						if (BIT_CHECK(a[n_to_blacklist],
-								r_to_blacklist) != BIT_CHECK(b[n_to_blacklist], r_to_blacklist)) {
-							// These lines contributed to the blacklisted attribute
-							// Remove them from the cost array
-
-							current_attribute = 0;
-
-							for (unsigned int m = 0;
-									m < n_longs
-											&& current_attribute < n_attributes;
-									m++) {
-								for (int n = LONG_BITS - 1;
-										n >= 0
-												&& current_attribute
-														< n_attributes; n--) {
-
-									if ((blacklist[current_attribute] == 0)
-											&& (BIT_CHECK(a[m],
-													n) != BIT_CHECK(b[m], n))) {
-										// Disagreement
-										// Remove from cost
-
-										// TODO: this if shouldn't be necessary
-										// but I'm getting negative values here...
-										if (cost[current_attribute] > 0) {
-											cost[current_attribute]--;
-										}
-									}
-
-									current_attribute++;
-								}
-							}
-						}
-					}
-				}
+			if (n_attributes > 20 && i == 9) {
+				//skip
+				printf(" ... ");
+				i = n_attributes - 10;
 			}
 		}
+		fprintf(stdout, "\n");
 
-//		printf("Cost : ");
-//
-//		for (unsigned long i = 0; i < n_attributes; i++) {
-//			fprintf(stdout, "%lu ", cost[i]);
-//		}
-//		fprintf(stdout, "\n");
 	} while (max_cost > 0);
 
 	// Profit!
 	printf("Solution: { ");
 	for (unsigned long i = 0; i < n_attributes; i++) {
-		if (blacklist[i] == 1) {
+		if (solution[i]) {
+			// This attribute is set so it's part of the solution
 			printf("%lu ", i + 1);
 		}
 	}
 	printf("}\n");
 
-	free(blacklist);
+	// Cleanup
+	free(solution);
 	free(cost);
 
 	free(n_items_per_class);

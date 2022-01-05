@@ -15,7 +15,17 @@
 #include <math.h>
 #include <string.h>
 
+// Used in debugging
+#ifdef DEBUG
+#define DEBUG_PRINT(stream, title,dataset, extra) print_dataset(stream, title, dataset, extra);
+#else
+#define DEBUG_PRINT(stream, title,dataset, extra)
+#endif
+
 #define OK 0
+
+#define WITHOUT_EXTRA_BITS 0
+#define WITH_EXTRA_BITS 1
 
 #define DATASET_VALID_DIMENSIONS 0
 #define DATASET_INVALID_DIMENSIONS 1
@@ -96,12 +106,13 @@ unsigned int get_class(const unsigned long *line);
 /**
  * Prints a line to stream
  */
-void print_line(FILE *stream, const unsigned long *line);
+void print_line(FILE *stream, const unsigned long *line, const char extra_bits);
 
 /**
  * Prints the whole dataset
  */
-void print_dataset(FILE *stream, unsigned long *dataset, const char *title);
+void print_dataset(FILE *stream, const char *title, unsigned long *dataset,
+		const char extra_bits);
 
 /**
  * Compares two lines of the dataset
@@ -131,7 +142,7 @@ unsigned long add_jnsqs(unsigned long *dataset);
  * Removes duplicated lines from the dataset.
  * Assumes the dataset is ordered
  */
-int remove_duplicates(unsigned long *dataset);
+unsigned long remove_duplicates(unsigned long *dataset);
 
 /**
  * Fill the arrays with the number os items per class and also a matrix with
@@ -140,5 +151,35 @@ int remove_duplicates(unsigned long *dataset);
  */
 void fill_class_arrays(unsigned long *dataset, unsigned long *n_items_per_class,
 		unsigned long **observations_per_class);
+
+/**
+ * Calculates and adds the current lines cost to the cost array
+ */
+void increase_cost_line(const unsigned long *a, const unsigned long *b,
+		unsigned long *cost);
+
+/**
+ * Calculates the cost of the full (virtual) disjoint matrix
+ */
+void calculate_initial_cost(unsigned long **observations_per_class,
+		const unsigned long *n_items_per_class, unsigned long *cost);
+
+/**
+ * Calculates the cost of the attributes that aren't blacklisted (removed)
+ * and subtracts the cost from the cost matrix
+ */
+void decrease_cost_line(const unsigned long *a, const unsigned long *b,
+		const unsigned long attribute_to_blacklist,
+		const unsigned char *blacklist, unsigned long *cost);
+
+/**
+ *  We don't want to build the full disjoint matrix
+ *  So we check again which line combinations contributed to the
+ *  blacklisted attribute and remove their contribution from the cost array
+ */
+void decrease_cost_blacklisted_attribute(unsigned long **observations_per_class,
+		const unsigned long *n_items_per_class,
+		const unsigned long attribute_to_blacklist,
+		const unsigned char *blacklist, unsigned long *cost);
 
 #endif
