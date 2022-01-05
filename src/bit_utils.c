@@ -18,5 +18,5 @@ unsigned long set_bits(const unsigned long destination, const unsigned long sour
 
 unsigned long get_bits(const unsigned long source, const unsigned int at, const unsigned int numbits) {
 	unsigned long mask = (~0LU) << numbits;
-	return (source >> at) & ~mask;
+	return (unsigned long) ((source >> at) & ~mask);
 }

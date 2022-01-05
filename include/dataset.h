@@ -9,8 +9,8 @@
 #ifndef DATASET_H
 #define DATASET_H
 
+#include "bit_utils.h"
 #include "hdf5.h"
-#include "dataset_lines.h"
 #include <malloc.h>
 #include <math.h>
 #include <string.h>
@@ -27,31 +27,56 @@
  */
 #define DATA_RANK 2
 
-typedef struct dataset {
-	hsize_t dimensions[2];
+/**
+ *
+ */
 
-	hsize_t chunk_dimensions[2];
-
-	unsigned int n_classes;
-
-	unsigned long n_observations;
-
-	unsigned long n_attributes;
-
-	unsigned long *data;
-
-	unsigned long *last;
-} dataset;
+#define NEXT(line) ((line) += (n_longs))
 
 /**
- * Prepares dataset
+ *
  */
-int setup_dataset(const hid_t dataset_id, dataset *dataset);
+
+/**
+ * Dataset dimensions
+ */
+extern hsize_t dimensions[2];
+
+/**
+ * Number of attributes
+ */
+extern unsigned long n_attributes;
+
+/**
+ * Number of observations
+ */
+extern unsigned long n_observations;
+
+/**
+ * Number of classes
+ */
+extern unsigned int n_classes;
+
+/**
+ * Number of bits used to store the class
+ */
+extern unsigned int n_bits_for_class;
+
+/**
+ * Number of longs needed to store one line of the dataset
+ */
+extern unsigned int n_longs;
+
+/**
+ * Reads the dataset attributes and fills the global variables
+ */
+int read_attributes(const hid_t dataset_id);
 
 /**
  * Reads the value of one attribute from the dataset
  */
-herr_t read_attribute(hid_t dataset_id, const char *attribute, hid_t datatype, void *value);
+herr_t read_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
+		void *value);
 
 /**
  * Reads chunk dimensions from dataset if chunking was enabled
@@ -64,20 +89,56 @@ int get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions);
 void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions);
 
 /**
- * Adds a new line to the dataset
+ * Returns the class of this data line
  */
-void* dataset_add_line(dataset *dataset, const unsigned long *data);
+unsigned int get_class(const unsigned long *line);
 
 /**
- * Reads data from hdf5 dataset and fills the dataset and dataset_lines structures
+ * Prints a line to stream
  */
-int build_dataset(const hid_t dataset_id, dataset *dataset, dataset_lines *dataset_lines);
+void print_line(FILE *stream, const unsigned long *line);
 
 /**
- * Adds jnsq bits to dataset.
- * @returns updated number of attributes
+ * Prints the whole dataset
  */
-unsigned long setup_jnsq(const dataset_lines *dataset_lines, const unsigned int max_inconsistencies,
-		const unsigned long n_attributes);
+void print_dataset(FILE *stream, unsigned long *dataset, const char *title);
+
+/**
+ * Compares two lines of the dataset
+ * Used to sort the dataset
+ */
+int compare_lines(const void *a, const void *b);
+
+/**
+ * Checks if the lines have the same attributes
+ */
+int has_same_attributes(const unsigned long *a, const unsigned long *b);
+
+/**
+ * Replaces the class bits with jnsq bits
+ * It's ok, because the number of jnsq bits is always <= bits needed for class
+ * And we don't need the class anymore because we extracted it to the
+ * dataset_line structure
+ */
+void set_jnsq(unsigned long *line, unsigned long inconsistency);
+
+/**
+ * Adds the JNSQs attributes to the dataset
+ */
+unsigned long add_jnsqs(unsigned long *dataset);
+
+/**
+ * Removes duplicated lines from the dataset.
+ * Assumes the dataset is ordered
+ */
+int remove_duplicates(unsigned long *dataset);
+
+/**
+ * Fill the arrays with the number os items per class and also a matrix with
+ * references to the lines that belong to eacv class to simplify the
+ * calculation of the disjoint matrix
+ */
+void fill_class_arrays(unsigned long *dataset, unsigned long *n_items_per_class,
+		unsigned long **observations_per_class);
 
 #endif
