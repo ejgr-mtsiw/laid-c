@@ -7,15 +7,18 @@
  */
 
 //
-#define DEBUG
+//#define DEBUG
 //
-#include "clargs.h"
 #include "bit_utils.h"
+#include "clargs.h"
 #include "cost.h"
 #include "dataset.h"
+#include "dataset_hdf5.h"
+#include "disjoint_matrix.h"
 #include "globals.h"
 #include "hdf5.h"
 #include "jnsq.h"
+#include "set_cover.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -29,107 +32,26 @@ int main(int argc, char **argv) {
 	 */
 	clargs args;
 
-	/**
-	 * File identifier
-	 */
-	hid_t file_id = 0;
-
-	/**
-	 * Dataset identifier
-	 */
-	hid_t dataset_id = 0;
-
-	/**
-	 * The dataset data
-	 */
-	unsigned long *dataset = NULL;
-
-	/**
-	 * Array that stores the number of observations for each class
-	 */
-	unsigned long *n_items_per_class = NULL;
-
-	/**
-	 * Matrix that stores the list of observations per class
-	 */
-	unsigned long **observations_per_class = NULL;
-
-	/**
-	 * Array to store the costs for each atribute
-	 */
-	unsigned long *cost = NULL;
-
-	/**
-	 * Array to store the solution attributes
-	 * Also works as a sort of blacklist: every attribute that's part
-	 * of the solution is ignored in the next round of calculating costs
-	 */
-	unsigned char *solution = NULL;
-
-	/**
-	 * Number of attributes blacklisted
-	 */
-	//unsigned long n_blacklisted_attributes = 0;
-
-	/**
-	 * Array to store the blacklisted attributes
-	 * This array is for fast checking the blaclisted attributes: the solution
-	 * is a list of all the attributes selected this one stores a flag
-	 * indicating if the blacklisted[i] attribute is blacklisted (1) or not (0)
-	 */
-	//unsigned char *blacklisted = NULL;
-
-
 	// Parse command line arguments
 	if (read_args(argc, argv, &args) == READ_CL_ARGS_NOK) {
 		return EXIT_FAILURE;
 	}
 
-	//Open the data file
-	file_id = H5Fopen(args.filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-	if (file_id < 1) {
-		// Error creating file
-		fprintf(stderr, "Error opening file %s\n", args.filename);
-		return EXIT_FAILURE;
-	}
-	fprintf(stdout, "Dataset file opened\n");
-
-	dataset_id = H5Dopen2(file_id, args.datasetname, H5P_DEFAULT);
-	if (dataset_id < 1) {
-		// Error creating file
-		fprintf(stderr, "Dataset %s not found!\n", args.datasetname);
-		return EXIT_FAILURE;
-	}
-	fprintf(stdout, "Dataset opened\n");
-
 	/**
-	 * Read dataset attributes
+	 * The dataset data
 	 */
-	if (read_attributes(dataset_id) != OK) {
-		fprintf(stderr, "Error readings attributes from dataset\n");
-		return EXIT_FAILURE;
+	unsigned long *dataset;
+
+	// Read the dataset into memory
+	herr_t status = read_dataset(args.filename, args.datasetname, &dataset);
+	if (status != OK) {
+		// TODO: Error
+		return status;
 	}
 
 	fprintf(stdout, " - classes = %d \n", g_n_classes);
 	fprintf(stdout, " - observations = %lu \n", g_n_observations);
 	fprintf(stdout, " - attributes = %lu \n", g_n_attributes);
-
-	// Allocate main buffer
-	// https://vorpus.org/blog/why-does-calloc-exist/
-	dataset = (unsigned long*) calloc(g_dimensions[0] * g_dimensions[1],
-			sizeof(unsigned long));
-	if (dataset == NULL) {
-		fprintf(stderr, "Error allocating dataset\n");
-		return EXIT_FAILURE;
-	}
-
-	// Fill dataset from hdf5 file
-	herr_t status = H5Dread(dataset_id, H5T_NATIVE_ULONG, H5S_ALL, H5S_ALL,
-	H5P_DEFAULT, dataset);
-	if (status != 0) {
-		fprintf(stderr, "Error reading the dataset data\n");
-		return EXIT_FAILURE;
-	}
 
 	DEBUG_PRINT_DATASET(stdout, "Initial data", dataset, WITH_EXTRA_BITS)
 
@@ -150,16 +72,24 @@ int main(int argc, char **argv) {
 	// FIll class arrays
 	fprintf(stdout, "Checking classes:\n");
 
-	n_items_per_class = (unsigned long*) calloc(g_n_classes,
+	/**
+	 * Array that stores the number of observations for each class
+	 */
+	unsigned long *n_items_per_class = (unsigned long*) calloc(g_n_classes,
 			sizeof(unsigned long));
 	if (n_items_per_class == NULL) {
 		fprintf(stderr, "Error allocating n_items_per_class\n");
 		return EXIT_FAILURE;
 	}
 
-	// TODO: should we replace the static matrix by pointers so each
+	/**
+	 * Matrix that stores the list of observations per class
+	 */
+	// WHATIF: should we replace the static matrix by pointers so each
 	// class has n items? Right now we waste at least half the matrix space
-	observations_per_class = (unsigned long**) calloc(
+	// WHATIF: If we reduce the number of possible columns and lines to
+	// 2^32-1 we could use half the memory by storing the line indexes
+	unsigned long **observations_per_class = (unsigned long**) calloc(
 			g_n_classes * g_n_observations, sizeof(unsigned long*));
 
 	fill_class_arrays(dataset, n_items_per_class, observations_per_class);
@@ -187,115 +117,21 @@ int main(int argc, char **argv) {
 
 	// Do LAD
 
-	// Allocate cost array
-	cost = calloc(g_n_attributes, sizeof(long));
-	if (cost == NULL) {
-		fprintf(stderr, "Error allocating cost array\n");
+	// Build disjoint matrix and store it in the hdf5 file
+	if (create_disjoint_matrix(args.filename, DISJOINT_MATRIX_DATASET_NAME,
+			n_items_per_class, observations_per_class) != OK) {
 		return EXIT_FAILURE;
 	}
 
-	/**
-	 * Allocate solution/blacklist array
-	 */
-	solution = calloc(g_n_attributes, sizeof(unsigned char));
+	free(dataset);
 
-	/**
-	 * Allocate blacklisted array
-	 */
-	//blacklisted = calloc(g_n_attributes, sizeof(unsigned char));
+	calculate_solution(args.filename, DISJOINT_MATRIX_DATASET_NAME,
+			n_items_per_class);
 
-	// Compare the lines of one class with all the others and get the number
-	// of disagreements for each attribute.
-	// Store the disagreement in the cost array.
-
-	/*
-	 //DEBUG
-	 for (unsigned int i = 0; i < g_n_classes; i++) {
-	 for (unsigned long n_i = i * g_n_observations;
-	 n_i < i * g_n_observations + n_items_per_class[i]; n_i++) {
-	 print_line(stdout, observations_per_class[n_i], WITHOUT_EXTRA_BITS);
-	 printf(" %d\n", i);
-	 }
-	 }
-	 */
-
-	// Calculate initial cost
-	fprintf(stdout, "Running main loop:\n");
-
-	calculate_initial_cost(observations_per_class, n_items_per_class, cost);
-
-	DEBUG_PRINT_COST(stdout, "Initial cost",cost)
-
-	/**
-	 * Max cost in the array.
-	 * Program will end when this is 0
-	 */
-	unsigned long max_cost = 0;
-
-	/**
-	 * Attribute to add to blacklist/solution in this round
-	 * It's the attribute with the highest cost
-	 */
-	unsigned long attribute_to_blacklist = 0;
-
-	do {
-
-		// Select attribute to blacklist / add to solution
-		max_cost = 0;
-		attribute_to_blacklist = 0;
-
-		for (unsigned long i = 0; i < g_n_attributes; i++) {
-			if (cost[i] > max_cost) {
-				max_cost = cost[i];
-				attribute_to_blacklist = i;
-			}
-		}
-
-		printf(" - Max. cost : %lu\n", max_cost);
-
-		if (max_cost == 0) {
-			// Nothing else to do here: we have a solution that covers the
-			// full disjoint matrix
-			break;
-		}
-
-		// Update solution and blacklist attribute with max cost
-		solution[attribute_to_blacklist] = 1;
-		cost[attribute_to_blacklist] = 0;
-
-		printf("  - Blacklisted: %lu\n", attribute_to_blacklist + 1);
-
-		// Calculate the cost of all the lines in the disjoint matrix that had
-		// the blacklisted atribute set, and subtract it from the current cost
-		decrease_cost_blacklisted_attribute(observations_per_class,
-				n_items_per_class, attribute_to_blacklist, solution, cost);
-
-		DEBUG_PRINT_COST(stdout, "Current cost", cost);
-
-	} while (max_cost > 0);
-
-	// Profit!
-	fprintf(stdout, "Solution: { ");
-	for (unsigned long i = 0; i < g_n_attributes; i++) {
-		if (solution[i]) {
-			// This attribute is set so it's part of the solution
-			printf("%lu ", i + 1);
-		}
-	}
-	printf("}\n");
-
-	// Cleanup
-	free(solution);
-	free(cost);
+	fprintf(stdout, "All done!\n");
 
 	free(n_items_per_class);
 	free(observations_per_class);
-	free(dataset);
-
-	H5Dclose(dataset_id);
-	H5Fclose(file_id);
-
-	fprintf(stdout, "All done!\n");
 
 	return EXIT_SUCCESS;
 }

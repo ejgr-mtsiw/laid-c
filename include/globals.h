@@ -11,6 +11,9 @@
 
 #include "hdf5.h"
 
+#define OK 0
+#define NOK -1
+
 // These are global variables that I would like to reduce/remove in future
 /**
  * Dataset dimensions

@@ -11,6 +11,8 @@
 
 #include "bit_utils.h"
 #include "globals.h"
+#include "hdf5.h"
+#include "malloc.h"
 
 /**
  * Max number of columns to print
@@ -38,8 +40,10 @@ void increase_cost_line(const unsigned long *a, const unsigned long *b,
 /**
  * Calculates the cost of the full (virtual) disjoint matrix
  */
-void calculate_initial_cost(unsigned long **observations_per_class,
-		const unsigned long *n_items_per_class, unsigned long *cost);
+int calculate_cost(const hid_t dataset_id, const hid_t dataset_space_id,
+		const hid_t memory_space_id, const unsigned long n_lines,
+		const unsigned char *line_blacklist,
+		const unsigned char *attribute_blacklist, unsigned long *cost);
 
 /**
  * Calculates the cost of the attributes that aren't blacklisted (removed)

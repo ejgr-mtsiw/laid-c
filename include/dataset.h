@@ -22,22 +22,8 @@
 #define DEBUG_PRINT_DATASET(stream, title,dataset, extra)
 #endif
 
-#define OK 0
-
 #define WITHOUT_EXTRA_BITS 0
 #define WITH_EXTRA_BITS 1
-
-#define DATASET_INVALID_DIMENSIONS 1
-#define DATASET_NOT_ENOUGH_CLASSES 2
-#define DATASET_NOT_ENOUGH_ATTRIBUTES 3
-#define DATASET_NOT_ENOUGH_OBSERVATIONS 4
-
-#define ERROR_ALLOCATING_DATASET_DATA 1
-
-/**
- * Number of ranks for data
- */
-#define DATA_RANK 2
 
 /**
  *
@@ -48,32 +34,7 @@
 #define GET_NEXT_OBSERVATION(line) ((line) + (g_n_longs))
 #define GET_PREV_OBSERVATION(line) ((line) - (g_n_longs))
 
-#define GET_LAST_OBSERVATION(dset) ((dset) + (g_n_observations * g_n_longs))
-
-/**
- *
- */
-
-/**
- * Reads the dataset attributes and fills the global variables
- */
-int read_attributes(const hid_t dataset_id);
-
-/**
- * Reads the value of one attribute from the dataset
- */
-herr_t read_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
-		void *value);
-
-/**
- * Reads chunk dimensions from dataset if chunking was enabled
- */
-int get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions);
-
-/**
- * Returns the dataset dimensions stored in the hdf5 dataset
- */
-void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions);
+#define GET_LAST_OBSERVATION(dset) ((dset) + ((g_n_observations - 1) * g_n_longs))
 
 /**
  * Returns the class of this data line

@@ -56,28 +56,63 @@ void increase_cost_line(const unsigned long *a, const unsigned long *b,
 /**
  * Calculates the cost of the full (virtual) disjoint matrix
  */
-void calculate_initial_cost(unsigned long **observations_per_class,
-		const unsigned long *n_items_per_class, unsigned long *cost) {
+int calculate_cost(const hid_t dataset_id, const hid_t dataset_space_id,
+		const hid_t memory_space_id, const unsigned long n_lines,
+		const unsigned char *line_blacklist,
+		const unsigned char *attribute_blacklist, unsigned long *cost) {
 
-	unsigned int i, j;
-	unsigned long n_i, n_j;
+	// Alocate buffer
+	unsigned long *buffer = (unsigned long*) malloc(
+			sizeof(unsigned long) * g_n_longs);
 
-	for (i = 0; i < g_n_classes - 1; i++) {
-		for (j = i + 1; j < g_n_classes; j++) {
+	// We will read one line at a time
+	hsize_t offset[2] = { 0, 0 };
+	hsize_t count[2] = { 1, g_n_longs };
 
-			for (n_i = i * g_n_observations;
-					n_i < i * g_n_observations + n_items_per_class[i]; n_i++) {
+	// Calculate cost
+	for (unsigned long i = 0; i < n_lines; i++) {
 
-				for (n_j = j * g_n_observations;
-						n_j < j * g_n_observations + n_items_per_class[j];
-						n_j++) {
+		// If this line is blacklisted: skip!
+		if (line_blacklist[i]) {
+			continue;
+		}
 
-					increase_cost_line(observations_per_class[n_i],
-							observations_per_class[n_j], cost);
+		// Update offset
+		offset[0] = i;
+
+		// Select hyperslab on file dataset
+		H5Sselect_hyperslab(dataset_space_id, H5S_SELECT_SET, offset,
+		NULL, count, NULL);
+
+		// Read line to dataset
+		H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id, dataset_space_id,
+		H5P_DEFAULT, buffer);
+
+		// Current attribute
+		unsigned long c = 0;
+
+		for (unsigned int n = 0; n < g_n_longs && c < g_n_attributes; n++) {
+
+			for (int bit = LONG_BITS - 1; c < g_n_attributes && bit >= 0;
+					bit--) {
+
+				if (attribute_blacklist[c] == 0
+						&& (buffer[n] & AND_MASK_TABLE[bit])) {
+					// Disagreement
+					// Add to cost
+					cost[c]++;
 				}
+				c++;
 			}
 		}
+
+		if ((i % (n_lines / 10)) == 0) {
+			fprintf(stdout, "... %07lu\n", i);
+		}
 	}
+	free(buffer);
+
+	return OK;
 }
 
 /**
