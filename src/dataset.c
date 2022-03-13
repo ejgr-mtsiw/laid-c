@@ -87,14 +87,16 @@ void print_dataset(FILE *stream, const char *title, uint_fast64_t *dataset,
  */
 int compare_lines(const void *a, const void *b) {
 
-	long long res = 0;
-
 	for (uint_fast32_t i = 0; i < g_n_longs; i++) {
-		res = *((uint_fast64_t*) a + i) - *((uint_fast64_t*) b + i);
-		if (res > 0) {
+
+		uint_fast64_t va = *((const uint_fast64_t*) a + i);
+		uint_fast64_t vb = *((const uint_fast64_t*) b + i);
+
+		if (va > vb) {
 			return 1;
 		}
-		if (res < 0) {
+
+		if (va < vb) {
 			return -1;
 		}
 	}
