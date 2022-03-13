@@ -7,8 +7,6 @@
  */
 
 //
-#define DEBUG
-//
 #include "bit_utils.h"
 #include "clargs.h"
 #include "dataset.h"

@@ -12,6 +12,9 @@
 #include "hdf5.h"
 #include <stdint.h>
 
+//
+#define DEBUG 1
+
 #define status_t uint_fast8_t
 
 #define NOK 0

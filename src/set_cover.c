@@ -185,6 +185,8 @@ status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	hsize_t offset[2] = { 0, 0 };
 	hsize_t count[2] = { 1, g_n_longs };
 
+	uint_fast32_t n_blacklisted_lines = 0;
+
 	for (uint_fast32_t i = 0; i < n_lines; i++) {
 
 		if (line_blacklist[i] == BLACKLISTED) {
@@ -205,12 +207,13 @@ status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 		if (buffer[n] & AND_MASK_TABLE[bit]) {
 			// The bit is set: Blacklist this line
 			line_blacklist[i] = BLACKLISTED;
-		}
-
-		if ((i % (n_lines / 10)) == 0) {
-			fprintf(stdout, "... %07lu\n", i);
+			n_blacklisted_lines++;
 		}
 	}
+
+#ifdef DEBUG
+	fprintf(stdout, "Blacklisted %lu lines.\n", n_blacklisted_lines);
+#endif
 
 	return OK;
 }
@@ -268,8 +271,9 @@ uint_fast32_t update_sum(const hid_t dataset_id, const hid_t dataset_space_id,
 		}
 
 #ifdef DEBUG
-		if ((i % (n_lines / 10)) == 0) {
-			fprintf(stdout, "DMX: Analysing line %lu of %lu.\n", i, n_lines);
+		if ((i + 1) % (n_lines / 10 + 1) == 0) {
+			fprintf(stdout, "DMX: Analysing line %lu of %lu.\n", i + 1,
+					n_lines);
 		}
 #endif
 
