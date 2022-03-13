@@ -1,3 +1,11 @@
+/*
+ ============================================================================
+ Name        : bit_utils.c
+ Author      : Eduardo Ribeiro
+ Description : Structures and functions to manipulate bits
+ ============================================================================
+ */
+
 #include "bit_utils.h"
 
 /**

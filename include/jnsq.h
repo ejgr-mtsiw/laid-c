@@ -12,6 +12,7 @@
 #include "bit_utils.h"
 #include "dataset.h"
 #include "globals.h"
+#include <stdint.h>
 
 /**
  * Replaces the class bits with jnsq bits
@@ -26,18 +27,19 @@
  * Inconsistentes em ambiente HDF5+ Python na cloud INCD. Revista de
  * Ciências da Computação, 85-112.
  */
-void set_jnsq_bits(unsigned long *line, unsigned int inconsistency);
+void set_jnsq_bits(uint_fast64_t *line, uint_fast8_t inconsistency);
 
 /**
  * Compares 2 lines and updates jnsq on to_update if needed and updates
  * inconsistency level
  */
-void update_jnsq(unsigned long *to_update, const unsigned long *to_compare,
-		unsigned int *inconsistency);
+void update_jnsq(uint_fast64_t *to_update, const uint_fast64_t *to_compare,
+		uint_fast8_t *inconsistency);
 
 /**
- * Adds the JNSQs attributes to the dataset
+ * Adds the JNSQs attributes to the dataset.
+ * Returns max inconsistency found
  */
-unsigned int add_jnsqs(unsigned long *dataset);
+uint_fast8_t add_jnsqs(uint_fast64_t *dataset);
 
 #endif

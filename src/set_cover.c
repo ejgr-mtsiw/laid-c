@@ -1,6 +1,6 @@
 /*
  ============================================================================
- Name        : set_cover.h
+ Name        : set_cover.c
  Author      : Eduardo Ribeiro
  Description : Structures and functions to apply the set cover algorithm
  ============================================================================

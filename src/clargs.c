@@ -1,6 +1,6 @@
 /*
  ============================================================================
- Name        : clargs.h
+ Name        : clargs.c
  Author      : Eduardo Ribeiro
  Description : Structures and functions to manage command line arguments
  ============================================================================

@@ -7,7 +7,6 @@
  */
 
 #include "jnsq.h"
-#include <stdint.h>
 
 /**
  * Replaces the class bits with jnsq bits
@@ -22,19 +21,19 @@
  * Inconsistentes em ambiente HDF5+ Python na cloud INCD. Revista de
  * Ciências da Computação, 85-112.
  */
-void set_jnsq_bits(unsigned long *line, unsigned int inconsistency) {
+void set_jnsq_bits(uint_fast64_t *line, uint_fast8_t inconsistency) {
 
 	// Check how many attributes remain
-	unsigned int remaining_attributes = g_n_attributes % BLOCK_BITS;
+	uint_fast8_t remaining_attributes = g_n_attributes % BLOCK_BITS;
 
 	// Jnsq starts after this bit
-	unsigned int jnsq_start = BLOCK_BITS - remaining_attributes;
+	uint_fast8_t jnsq_start = BLOCK_BITS - remaining_attributes;
 
-	unsigned long last_long = line[g_n_longs - 1];
+	uint_fast64_t last_long = line[g_n_longs - 1];
 
 	last_long >>= jnsq_start;
 
-	unsigned char i = 0;
+	uint_fast8_t i = 0;
 
 	for (i = 0; inconsistency > 0 && i < g_n_bits_for_class; i++) {
 		last_long <<= 1;
@@ -55,8 +54,8 @@ void set_jnsq_bits(unsigned long *line, unsigned int inconsistency) {
  * Compares 2 lines and updates jnsq on to_update if needed and updates
  * inconsistency level
  */
-void update_jnsq(unsigned long *to_update, const unsigned long *to_compare,
-		unsigned int *inconsistency) {
+void update_jnsq(uint_fast64_t *to_update, const uint_fast64_t *to_compare,
+		uint_fast8_t *inconsistency) {
 
 	// Set the line JNSQ
 	set_jnsq_bits(to_update, (*inconsistency));
@@ -74,22 +73,22 @@ void update_jnsq(unsigned long *to_update, const unsigned long *to_compare,
 /**
  * Adds the JNSQs attributes to the dataset
  */
-unsigned int add_jnsqs(unsigned long *dataset) {
+uint_fast8_t add_jnsqs(uint_fast64_t *dataset) {
 
 	// Current line
-	unsigned long *current = dataset;
+	uint_fast64_t *current = dataset;
 
 	// Previous line
-	unsigned long *prev = dataset;
+	uint_fast64_t *prev = dataset;
 
 	// Last line
-	unsigned long *last = GET_LAST_OBSERVATION(dataset);
+	uint_fast64_t *last = GET_LAST_OBSERVATION(dataset);
 
 	// Inconsistency
-	unsigned int inconsistency = 0;
+	uint_fast8_t inconsistency = 0;
 
 	// Max inconsistency found
-	unsigned int max_inconsistency = 0;
+	uint_fast8_t max_inconsistency = 0;
 
 	// first line has jnsq=0
 	set_jnsq_bits(current, 0);

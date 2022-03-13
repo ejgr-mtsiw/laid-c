@@ -7,7 +7,6 @@
  */
 
 #include "disjoint_matrix.h"
-#include <stdint.h>
 
 /**
  * Calculates the number of lines for the disjoint matrix
