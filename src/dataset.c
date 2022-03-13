@@ -11,31 +11,33 @@
 /**
  * Returns the class of this data line
  */
-unsigned int get_class(const unsigned long *line) {
+uint_fast8_t get_class(const uint_fast64_t *line) {
 
 	// Check how many attributes remain on last long
-	int remaining_attributes = g_n_attributes % LONG_BITS;
+	uint_fast8_t remaining_attributes = g_n_attributes % BLOCK_BITS;
 
 	// Class starts here
-	int at = LONG_BITS - remaining_attributes - g_n_bits_for_class;
+	uint_fast8_t at = BLOCK_BITS - remaining_attributes - g_n_bits_for_class;
 
-	return (unsigned int) get_bits(line[g_n_longs - 1], at, g_n_bits_for_class);
+	return (uint_fast8_t) get_bits(line[g_n_longs - 1], at, g_n_bits_for_class);
 }
 
 /**
  * Prints a line to stream
  */
-void print_line(FILE *stream, const unsigned long *line, const char extra_bits) {
+void print_line(FILE *stream, const uint_fast64_t *line,
+		const uint_fast8_t extra_bits) {
 
 	// Current attribute
-	unsigned long columns_to_write = g_n_attributes;
+	uint_fast32_t columns_to_write = g_n_attributes;
 
 	if (extra_bits == 1) {
 		columns_to_write += g_n_bits_for_class;
 	}
 
-	for (unsigned int i = 0; i < g_n_longs && columns_to_write > 0; i++) {
-		for (int j = LONG_BITS - 1; j >= 0 && columns_to_write > 0; j--) {
+	for (uint_fast32_t i = 0; i < g_n_longs && columns_to_write > 0; i++) {
+		for (int_fast8_t j = BLOCK_BITS - 1; j >= 0 && columns_to_write > 0;
+				j--) {
 			if (j % 8 == 0) {
 				fprintf(stream, " ");
 			}
@@ -58,13 +60,14 @@ void print_line(FILE *stream, const unsigned long *line, const char extra_bits) 
 /**
  * Prints the whole dataset
  */
-void print_dataset(FILE *stream, const char *title, unsigned long *dataset,
-		const char extra_bits) {
+void print_dataset(FILE *stream, const char *title, uint_fast64_t *dataset,
+		const uint_fast8_t extra_bits) {
 
 	fprintf(stream, "%s\n", title);
 
-	unsigned long *line = dataset;
-	for (unsigned long i = 0; i < g_n_observations; i++) {
+	uint_fast64_t *line = dataset;
+
+	for (uint_fast32_t i = 0; i < g_n_observations; i++) {
 		print_line(stream, line, extra_bits);
 		fprintf(stream, "\n");
 		NEXT(line);
@@ -86,8 +89,8 @@ int compare_lines(const void *a, const void *b) {
 
 	long long res = 0;
 
-	for (unsigned int i = 0; i < g_n_longs; i++) {
-		res = *((unsigned long*) a + i) - *((unsigned long*) b + i);
+	for (uint_fast32_t i = 0; i < g_n_longs; i++) {
+		res = *((uint_fast64_t*) a + i) - *((uint_fast64_t*) b + i);
 		if (res > 0) {
 			return 1;
 		}
@@ -95,37 +98,39 @@ int compare_lines(const void *a, const void *b) {
 			return -1;
 		}
 	}
+
 	return 0;
 }
 
 /**
  * Checks if the lines have the same attributes
  */
-int has_same_attributes(const unsigned long *a, const unsigned long *b) {
+uint_fast8_t has_same_attributes(const uint_fast64_t *a, const uint_fast64_t *b) {
 
-	long long res = 0;
+	uint_fast64_t res = 0;
 
-	for (unsigned int i = 0; i < g_n_longs - 1; i++) {
+	for (uint_fast32_t i = 0; i < g_n_longs - 1; i++) {
 		res = *(a + i) - *(b + i);
 		if (res != 0) {
 			return 0;
 		}
 	}
 
-	unsigned int remaining_attributes = g_n_attributes % LONG_BITS;
+	uint_fast32_t remaining_attributes = g_n_attributes % BLOCK_BITS;
 
 	if (remaining_attributes == 0) {
 		// Nothing more to check
 		return 1;
 	}
 
-	unsigned long mask = ~0L;
+	uint_fast64_t mask = ~0LU;
 	mask >>= remaining_attributes;
 	mask = ~mask;
 
 	if ((a[g_n_longs - 1] & mask) != (b[g_n_longs - 1] & mask)) {
 		return 0;
 	}
+
 	return 1;
 }
 
@@ -133,20 +138,20 @@ int has_same_attributes(const unsigned long *a, const unsigned long *b) {
  * Removes duplicated lines from the dataset.
  * Assumes the dataset is ordered
  */
-unsigned long remove_duplicates(unsigned long *dataset) {
+uint_fast32_t remove_duplicates(uint_fast64_t *dataset) {
 
-	unsigned long *line = dataset;
-	unsigned long *last = line;
+	uint_fast64_t *line = dataset;
+	uint_fast64_t *last = line;
 
-	unsigned long n_uniques = 1;
+	uint_fast32_t n_uniques = 1;
 
-	for (unsigned long i = 0; i < g_n_observations - 1; i++) {
+	for (uint_fast32_t i = 0; i < g_n_observations - 1; i++) {
 		NEXT(line);
 		if (compare_lines(line, last) != 0) {
 			NEXT(last);
 			n_uniques++;
 			if (last != line) {
-				memcpy(last, line, sizeof(unsigned long) * g_n_longs);
+				memcpy(last, line, sizeof(uint_fast64_t) * g_n_longs);
 			}
 		}
 	}
@@ -163,16 +168,16 @@ unsigned long remove_duplicates(unsigned long *dataset) {
  *
  * Inputs are expected to be zeroed arrays
  */
-void fill_class_arrays(unsigned long *dataset, unsigned long *n_items_per_class,
-		unsigned long **observations_per_class) {
+void fill_class_arrays(uint_fast64_t *dataset, uint_fast32_t *n_items_per_class,
+		uint_fast32_t **observations_per_class) {
 
 	// Current line
-	unsigned long *line = dataset;
+	uint_fast64_t *line = dataset;
 
 	// This line class
-	unsigned int clas = 0;
+	uint_fast8_t clas = 0;
 
-	for (unsigned long i = 0; i < g_n_observations; i++) {
+	for (uint_fast32_t i = 0; i < g_n_observations; i++) {
 		clas = get_class(line);
 
 		observations_per_class[clas * g_n_observations + n_items_per_class[clas]] =

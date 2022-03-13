@@ -13,6 +13,7 @@
 #include "hdf5.h"
 #include <math.h>
 #include <malloc.h>
+#include <stdint.h>
 
 #define DATASET_INVALID_DIMENSIONS 1
 #define DATASET_NOT_ENOUGH_CLASSES 2
@@ -51,6 +52,6 @@ void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions);
  * Reads the full dataset data to the array
  */
 herr_t read_dataset(const char *filename, const char *datasetname,
-		unsigned long **dataset);
+		uint_fast64_t **dataset);
 
 #endif

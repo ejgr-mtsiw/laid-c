@@ -11,16 +11,16 @@
  * operations), I developed the following function (C++)
  * https://stackoverflow.com/questions/1283221/algorithm-for-copying-n-bits-at-arbitrary-position-from-one-int-to-another
  */
-unsigned long set_bits(const unsigned long destination,
-		const unsigned long source, const unsigned int at,
-		const unsigned int numbits) {
-	unsigned long mask =
-			((~0LU) >> (sizeof(unsigned long) * CHAR_BIT - numbits)) << at;
+uint_fast64_t set_bits(const uint_fast64_t destination,
+		const uint_fast64_t source, const uint_fast8_t at,
+		const uint_fast8_t numbits) {
+	uint_fast64_t mask =
+			((~0LU) >> (sizeof(uint_fast64_t) * CHAR_BIT - numbits)) << at;
 	return (destination & ~mask) | ((source << at) & mask);
 }
 
-unsigned long get_bits(const unsigned long source, const unsigned int at,
-		const unsigned int numbits) {
-	unsigned long mask = (~0LU) << numbits;
-	return (unsigned long) ((source >> at) & ~mask);
+uint_fast64_t get_bits(const uint_fast64_t source, const uint_fast8_t at,
+		const uint_fast8_t numbits) {
+	uint_fast64_t mask = (~0LU) << numbits;
+	return (uint_fast64_t) ((source >> at) & ~mask);
 }

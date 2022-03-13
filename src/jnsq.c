@@ -7,6 +7,7 @@
  */
 
 #include "jnsq.h"
+#include <stdint.h>
 
 /**
  * Replaces the class bits with jnsq bits
@@ -24,10 +25,10 @@
 void set_jnsq_bits(unsigned long *line, unsigned int inconsistency) {
 
 	// Check how many attributes remain
-	unsigned int remaining_attributes = g_n_attributes % LONG_BITS;
+	unsigned int remaining_attributes = g_n_attributes % BLOCK_BITS;
 
 	// Jnsq starts after this bit
-	unsigned int jnsq_start = LONG_BITS - remaining_attributes;
+	unsigned int jnsq_start = BLOCK_BITS - remaining_attributes;
 
 	unsigned long last_long = line[g_n_longs - 1];
 

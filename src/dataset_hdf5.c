@@ -117,7 +117,7 @@ void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions) {
  * Reads the full dataset data to the array
  */
 herr_t read_dataset(const char *filename, const char *datasetname,
-		unsigned long **dataset) {
+		uint_fast64_t **dataset) {
 
 	herr_t status = OK;
 
@@ -156,8 +156,8 @@ herr_t read_dataset(const char *filename, const char *datasetname,
 	/**
 	 * The dataset data
 	 */
-	*dataset = (unsigned long*) calloc(g_dimensions[0] * g_dimensions[1],
-			sizeof(unsigned long));
+	*dataset = (uint_fast64_t*) calloc(g_dimensions[0] * g_dimensions[1],
+			sizeof(uint_fast64_t));
 	if (dataset == NULL) {
 		fprintf(stderr, "Error allocating dataset\n");
 
@@ -170,14 +170,14 @@ herr_t read_dataset(const char *filename, const char *datasetname,
 	// Fill dataset from hdf5 file
 	status = H5Dread(dataset_id, H5T_NATIVE_ULONG, H5S_ALL, H5S_ALL,
 	H5P_DEFAULT, *dataset);
-	if (status != 0) {
+	if (status < 0) {
 		fprintf(stderr, "Error reading the dataset data\n");
+
+		// Free resources
+		H5Dclose(dataset_id);
+		H5Fclose(file_id);
+		return NOK;
 	}
 
-	// Free resources
-	// Close file and hdf5 dataset
-	H5Dclose(dataset_id);
-	H5Fclose(file_id);
-
-	return status;
+	return OK;
 }

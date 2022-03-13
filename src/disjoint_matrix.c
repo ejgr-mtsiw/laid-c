@@ -7,16 +7,17 @@
  */
 
 #include "disjoint_matrix.h"
+#include <stdint.h>
 
 /**
  * Calculates the number of lines for the disjoint matrix
  */
-unsigned long calculate_number_of_lines(const unsigned long *n_items_per_class) {
+uint_fast64_t calculate_number_of_lines(const uint_fast32_t *n_items_per_class) {
 	// Calculate number of lines for the matrix
-	unsigned long n_lines = 0;
+	uint_fast64_t n_lines = 0;
 
-	for (unsigned int i = 0; i < g_n_classes - 1; i++) {
-		for (unsigned int j = i + 1; j < g_n_classes; j++) {
+	for (uint_fast8_t i = 0; i < g_n_classes - 1; i++) {
+		for (uint_fast8_t j = i + 1; j < g_n_classes; j++) {
 			n_lines += n_items_per_class[i] * n_items_per_class[j];
 		}
 	}
@@ -30,8 +31,8 @@ unsigned long calculate_number_of_lines(const unsigned long *n_items_per_class) 
  * and will do nothing
  */
 herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
-		const unsigned long *n_items_per_class,
-		unsigned long **observations_per_class) {
+		const uint_fast32_t *n_items_per_class,
+		uint_fast32_t **observations_per_class) {
 
 	// Open file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -70,11 +71,11 @@ herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
 /**
  * Creates a new disjoint matrix dataset
  */
-int create_new_disjoint_matrix_dataset(hid_t file_id,
-		const unsigned long *n_items_per_class,
-		unsigned long **observations_per_class) {
+uint_fast8_t create_new_disjoint_matrix_dataset(hid_t file_id,
+		const uint_fast32_t *n_items_per_class,
+		uint_fast32_t **observations_per_class) {
 
-	unsigned long n_lines = calculate_number_of_lines(n_items_per_class);
+	uint_fast64_t n_lines = calculate_number_of_lines(n_items_per_class);
 
 	// Dataset dimensions
 	hsize_t dm_dimensions[2] = { n_lines, g_n_longs };
@@ -113,22 +114,22 @@ int create_new_disjoint_matrix_dataset(hid_t file_id,
 	NULL);
 
 	// Alocate buffer
-	unsigned long *buffer = (unsigned long*) malloc(
-			sizeof(unsigned long) * dm_chunk_dimensions[1]);
+	uint_fast64_t *buffer = (uint_fast64_t*) malloc(
+			sizeof(uint_fast64_t) * dm_chunk_dimensions[1]);
 
 	// We will write one line at a time
 	hsize_t count[2] = { 1, dm_chunk_dimensions[1] };
 	hsize_t offset[2] = { 0, 0 };
 
 	// Current line
-	for (unsigned int i = 0; i < g_n_classes - 1; i++) {
-		for (unsigned int j = i + 1; j < g_n_classes; j++) {
-			for (unsigned long n_i = i * g_n_observations;
+	for (uint_fast8_t i = 0; i < g_n_classes - 1; i++) {
+		for (uint_fast8_t j = i + 1; j < g_n_classes; j++) {
+			for (uint_fast32_t n_i = i * g_n_observations;
 					n_i < i * g_n_observations + n_items_per_class[i]; n_i++) {
-				for (unsigned long n_j = j * g_n_observations;
+				for (uint_fast32_t n_j = j * g_n_observations;
 						n_j < j * g_n_observations + n_items_per_class[j];
 						n_j++) {
-					for (unsigned int n = 0; n < g_n_longs; n++) {
+					for (uint_fast32_t n = 0; n < g_n_longs; n++) {
 						buffer[n] = observations_per_class[n_i][n]
 								^ observations_per_class[n_j][n];
 					}

@@ -13,6 +13,7 @@
 #include "globals.h"
 #include "hdf5.h"
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 // Used in debugging
@@ -39,18 +40,19 @@
 /**
  * Returns the class of this data line
  */
-unsigned int get_class(const unsigned long *line);
+uint_fast8_t get_class(const uint_fast64_t *line);
 
 /**
  * Prints a line to stream
  */
-void print_line(FILE *stream, const unsigned long *line, const char extra_bits);
+void print_line(FILE *stream, const uint_fast64_t *line,
+		const uint_fast8_t extra_bits);
 
 /**
  * Prints the whole dataset
  */
-void print_dataset(FILE *stream, const char *title, unsigned long *dataset,
-		const char extra_bits);
+void print_dataset(FILE *stream, const char *title, uint_fast64_t *dataset,
+		const uint_fast8_t extra_bits);
 
 /**
  * Compares two lines of the dataset
@@ -61,20 +63,20 @@ int compare_lines(const void *a, const void *b);
 /**
  * Checks if the lines have the same attributes
  */
-int has_same_attributes(const unsigned long *a, const unsigned long *b);
+uint_fast8_t has_same_attributes(const uint_fast64_t *a, const uint_fast64_t *b);
 
 /**
  * Removes duplicated lines from the dataset.
  * Assumes the dataset is ordered
  */
-unsigned long remove_duplicates(unsigned long *dataset);
+uint_fast32_t remove_duplicates(uint_fast64_t *dataset);
 
 /**
  * Fill the arrays with the number os items per class and also a matrix with
  * references to the lines that belong to eacv class to simplify the
  * calculation of the disjoint matrix
  */
-void fill_class_arrays(unsigned long *dataset, unsigned long *n_items_per_class,
-		unsigned long **observations_per_class);
+void fill_class_arrays(uint_fast64_t *dataset, uint_fast32_t *n_items_per_class,
+		uint_fast32_t **observations_per_class);
 
 #endif
