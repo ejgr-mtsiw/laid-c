@@ -114,8 +114,8 @@ status_t calculate_solution(const char *filename, const char *datasetname,
 		memset(sum, 0, sizeof(uint_fast32_t) * g_n_attributes);
 
 		// Update sum array
-		update_sum(dataset_id, dm_dataset_space_id, dm_memory_space_id, n_lines,
-				line_blacklist, attribute_blacklist, sum);
+		calculate_sum(dataset_id, dm_dataset_space_id, dm_memory_space_id,
+				n_lines, line_blacklist, attribute_blacklist, sum);
 
 		// Select attribute to blacklist / add to solution
 		uint_fast32_t attribute_to_blacklist = 0;
@@ -138,6 +138,7 @@ status_t calculate_solution(const char *filename, const char *datasetname,
 		// Blacklist attribute with max total
 		attribute_blacklist[attribute_to_blacklist] = 1;
 		fprintf(stdout, "  - Blacklisted: %lu\n", attribute_to_blacklist + 1);
+		fflush( stdout);
 
 		// Blacklist lines that have the blacklisted attribute set
 		blacklist_lines(dataset_id, dm_dataset_space_id, dm_memory_space_id,
@@ -171,6 +172,12 @@ status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 		const uint_fast32_t attribute_to_blacklist,
 		uint_fast8_t *line_blacklist) {
 
+#ifdef DEBUG
+	uint_fast32_t next_output = 0;
+	fprintf(stdout, "[set_cover::blacklist_lines] Starting.\n");
+	fflush( stdout);
+#endif
+
 	// Attribute to blacklist is in long n
 	uint_fast32_t n = attribute_to_blacklist / BLOCK_BITS;
 
@@ -189,30 +196,43 @@ status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 
 	for (uint_fast32_t i = 0; i < n_lines; i++) {
 
-		if (line_blacklist[i] == BLACKLISTED) {
-			continue;
+		if (line_blacklist[i] != BLACKLISTED) {
+
+			// Update offset
+			offset[0] = i;
+
+			// Select hyperslab on file dataset
+			H5Sselect_hyperslab(dataset_space_id, H5S_SELECT_SET, offset,
+			NULL, count, NULL);
+
+			// Read line to dataset
+			H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id,
+					dataset_space_id,
+					H5P_DEFAULT, buffer);
+
+			if (buffer[n] & AND_MASK_TABLE[bit]) {
+				// The bit is set: Blacklist this line
+				line_blacklist[i] = BLACKLISTED;
+				n_blacklisted_lines++;
+			}
 		}
 
-		// Update offset
-		offset[0] = i;
+#ifdef DEBUG
+		if (i > next_output) {
+			fprintf(stdout,
+					"[set_cover::blacklist_lines] Analysing line %lu of %lu.\n",
+					i + 1, n_lines);
+			fflush( stdout);
 
-		// Select hyperslab on file dataset
-		H5Sselect_hyperslab(dataset_space_id, H5S_SELECT_SET, offset,
-		NULL, count, NULL);
-
-		// Read line to dataset
-		H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id, dataset_space_id,
-		H5P_DEFAULT, buffer);
-
-		if (buffer[n] & AND_MASK_TABLE[bit]) {
-			// The bit is set: Blacklist this line
-			line_blacklist[i] = BLACKLISTED;
-			n_blacklisted_lines++;
+			next_output += n_lines / 10;
 		}
+#endif
+
 	}
 
 #ifdef DEBUG
 	fprintf(stdout, "Blacklisted %lu lines.\n", n_blacklisted_lines);
+	fflush( stdout);
 #endif
 
 	return OK;
@@ -221,10 +241,16 @@ status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 /**
  * Finds the next attribute to blacklist
  */
-uint_fast32_t update_sum(const hid_t dataset_id, const hid_t dataset_space_id,
-		const hid_t memory_space_id, const uint_fast32_t n_lines,
-		const uint_fast8_t *line_blacklist,
+uint_fast32_t calculate_sum(const hid_t dataset_id,
+		const hid_t dataset_space_id, const hid_t memory_space_id,
+		const uint_fast32_t n_lines, const uint_fast8_t *line_blacklist,
 		const uint_fast8_t *attribute_blacklist, uint_fast32_t *sum) {
+
+#ifdef DEBUG
+	uint_fast32_t next_output = 0;
+	fprintf(stdout, "[set_cover::update_sum] Starting.\n");
+	fflush( stdout);
+#endif
 
 	// Alocate buffer
 	uint_fast64_t *buffer = (uint_fast64_t*) malloc(
@@ -238,42 +264,32 @@ uint_fast32_t update_sum(const hid_t dataset_id, const hid_t dataset_space_id,
 	for (uint_fast32_t i = 0; i < n_lines; i++) {
 
 		// If this line is blacklisted: skip!
-		if (line_blacklist[i] == BLACKLISTED) {
-			continue;
-		}
+		if (line_blacklist[i] != BLACKLISTED) {
 
-		// Update offset
-		offset[0] = i;
+			// Update offset
+			offset[0] = i;
 
-		// Select hyperslab on file dataset
-		H5Sselect_hyperslab(dataset_space_id, H5S_SELECT_SET, offset,
-		NULL, count, NULL);
+			// Select hyperslab on file dataset
+			H5Sselect_hyperslab(dataset_space_id, H5S_SELECT_SET, offset,
+			NULL, count, NULL);
 
-		// Read line to dataset
-		H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id, dataset_space_id,
-		H5P_DEFAULT, buffer);
+			// Read line to dataset
+			H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id,
+					dataset_space_id,
+					H5P_DEFAULT, buffer);
 
-		// Current attribute
-		uint_fast32_t c = 0;
+			update_sum(buffer, attribute_blacklist, sum);
 
-		for (uint_fast32_t n = 0; n < g_n_longs && c < g_n_attributes; n++) {
-
-			for (int_fast8_t bit = BLOCK_BITS - 1;
-					c < g_n_attributes && bit >= 0; bit--) {
-
-				if (attribute_blacklist[c] == NOT_BLACKLISTED
-						&& (buffer[n] & AND_MASK_TABLE[bit])) {
-					// Add to cost
-					sum[c]++;
-				}
-				c++;
-			}
 		}
 
 #ifdef DEBUG
-		if ((i + 1) % (n_lines / 10 + 1) == 0) {
-			fprintf(stdout, "DMX: Analysing line %lu of %lu.\n", i + 1,
-					n_lines);
+		if (i > next_output) {
+			fprintf(stdout,
+					"[set_cover::update_sum] Analysing line %lu of %lu.\n",
+					i + 1, n_lines);
+			fflush( stdout);
+
+			next_output += n_lines / 10;
 		}
 #endif
 
@@ -282,6 +298,24 @@ uint_fast32_t update_sum(const hid_t dataset_id, const hid_t dataset_space_id,
 	free(buffer);
 
 	return OK;
+}
+
+void update_sum(const uint_fast64_t *buffer,
+		const uint_fast8_t *attribute_blacklist, uint_fast32_t *sum) {
+	// Current attribute
+	uint_fast32_t c = 0;
+
+	for (uint_fast32_t n = 0; n < g_n_longs && c < g_n_attributes; n++) {
+		for (int_fast8_t bit = BLOCK_BITS - 1; c < g_n_attributes && bit >= 0;
+				bit--, c++) {
+
+			if (attribute_blacklist[c] == NOT_BLACKLISTED
+					&& (buffer[n] & AND_MASK_TABLE[bit])) {
+				// Add to cost
+				sum[c]++;
+			}
+		}
+	}
 }
 
 void close_resources(hid_t file_id, hid_t dataset_id, hid_t dm_dataset_space_id,

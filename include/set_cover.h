@@ -31,9 +31,12 @@ status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 /**
  * Finds the next attribute to blacklist
  */
-uint_fast32_t update_sum(const hid_t dataset_id, const hid_t dataset_space_id,
-		const hid_t memory_space_id, const uint_fast32_t n_lines,
-		const uint_fast8_t *line_blacklist,
+uint_fast32_t calculate_sum(const hid_t dataset_id,
+		const hid_t dataset_space_id, const hid_t memory_space_id,
+		const uint_fast32_t n_lines, const uint_fast8_t *line_blacklist,
+		const uint_fast8_t *attribute_blacklist, uint_fast32_t *sum);
+
+void update_sum(const uint_fast64_t *buffer,
 		const uint_fast8_t *attribute_blacklist, uint_fast32_t *sum);
 
 /**
