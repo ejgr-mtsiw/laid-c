@@ -31,7 +31,7 @@ uint_fast64_t calculate_number_of_lines(const uint_fast32_t *n_items_per_class) 
  */
 herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
 		const uint_fast32_t *n_items_per_class,
-		uint_fast32_t **observations_per_class) {
+		uint_fast64_t **observations_per_class) {
 
 	// Open file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -72,7 +72,7 @@ herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
  */
 uint_fast8_t create_new_disjoint_matrix_dataset(hid_t file_id,
 		const uint_fast32_t *n_items_per_class,
-		uint_fast32_t **observations_per_class) {
+		uint_fast64_t **observations_per_class) {
 
 	uint_fast64_t n_lines = calculate_number_of_lines(n_items_per_class);
 

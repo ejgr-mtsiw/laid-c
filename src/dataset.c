@@ -171,7 +171,7 @@ uint_fast32_t remove_duplicates(uint_fast64_t *dataset) {
  * Inputs are expected to be zeroed arrays
  */
 void fill_class_arrays(uint_fast64_t *dataset, uint_fast32_t *n_items_per_class,
-		uint_fast32_t **observations_per_class) {
+		uint_fast64_t **observations_per_class) {
 
 	// Current line
 	uint_fast64_t *line = dataset;

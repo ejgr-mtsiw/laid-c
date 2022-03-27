@@ -29,13 +29,13 @@ uint_fast64_t calculate_number_of_lines(const uint_fast32_t *n_items_per_class);
  */
 herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
 		const uint_fast32_t *n_items_per_class,
-		uint_fast32_t **observations_per_class);
+		uint_fast64_t **observations_per_class);
 
 /**
  * Creates a new disjoint matrix dataset
  */
 status_t create_new_disjoint_matrix_dataset(hid_t file_id,
 		const uint_fast32_t *n_items_per_class,
-		uint_fast32_t **observations_per_class);
+		uint_fast64_t **observations_per_class);
 
 #endif

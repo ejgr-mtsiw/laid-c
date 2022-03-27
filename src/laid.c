@@ -88,8 +88,8 @@ int main(int argc, char **argv) {
 	// class has n items? Right now we waste at least half the matrix space
 	// WHATIF: If we reduce the number of possible columns and lines to
 	// 2^32-1 we could use half the memory by storing the line indexes
-	uint_fast32_t **observations_per_class = (uint_fast32_t**) calloc(
-			g_n_classes * g_n_observations, sizeof(uint_fast32_t*));
+	uint_fast64_t **observations_per_class = (uint_fast64_t**) calloc(
+			g_n_classes * g_n_observations, sizeof(uint_fast64_t*));
 
 	fill_class_arrays(dataset, n_items_per_class, observations_per_class);
 
@@ -113,6 +113,17 @@ int main(int argc, char **argv) {
 	}
 
 	DEBUG_PRINT_DATASET(stdout, "Data + jnsq\n", dataset, WITHOUT_EXTRA_BITS)
+
+	unsigned long long original_matrixsize = calculate_number_of_lines(
+			n_items_per_class) * (g_n_attributes + g_n_bits_for_class);
+
+	char *unit = "bytes";
+	double matrixsize = original_matrixsize / 8;
+
+	fprintf(stdout, "Estimated disjoint matrix filesize: %f%s", matrixsize,
+			unit);
+
+	fflush(stdout);
 
 	// Do LAD
 
