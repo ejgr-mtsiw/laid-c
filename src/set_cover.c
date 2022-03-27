@@ -168,7 +168,7 @@ status_t calculate_solution(const char *filename, const char *datasetname,
 }
 
 status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
-		const hid_t memory_space_id, const uint_fast64_t n_lines,
+		const hid_t memory_space_id, const uint_fast32_t n_lines,
 		const uint_fast32_t attribute_to_blacklist,
 		uint_fast8_t *line_blacklist) {
 
