@@ -23,6 +23,10 @@
 status_t calculate_solution(const char *filename, const char *datasetname,
 		const uint_fast32_t *n_items_per_class);
 
+/**
+ * Reads the disjoint matrix dataset and blacklists the lines that
+ * depend on the attribute to blacklist
+ */
 status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 		const hid_t memory_space_id, const uint_fast32_t n_lines,
 		const uint_fast32_t attribute_to_blacklist,

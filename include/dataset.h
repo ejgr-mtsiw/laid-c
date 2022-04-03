@@ -30,7 +30,7 @@
  *
  */
 
-#define NEXT(line) ((line) += (g_n_longs))
+#define NEXT_LINE(line) ((line) += (g_n_longs))
 
 #define GET_NEXT_OBSERVATION(line) ((line) + (g_n_longs))
 #define GET_PREV_OBSERVATION(line) ((line) - (g_n_longs))
@@ -41,18 +41,6 @@
  * Returns the class of this data line
  */
 uint_fast8_t get_class(const uint_fast64_t *line);
-
-/**
- * Prints a line to stream
- */
-void print_line(FILE *stream, const uint_fast64_t *line,
-		const uint_fast8_t extra_bits);
-
-/**
- * Prints the whole dataset
- */
-void print_dataset(FILE *stream, const char *title, uint_fast64_t *dataset,
-		const uint_fast8_t extra_bits);
 
 /**
  * Compares two lines of the dataset
@@ -68,15 +56,28 @@ uint_fast8_t has_same_attributes(const uint_fast64_t *a, const uint_fast64_t *b)
 /**
  * Removes duplicated lines from the dataset.
  * Assumes the dataset is ordered
+ * Returns number of unique observations
  */
 uint_fast32_t remove_duplicates(uint_fast64_t *dataset);
 
 /**
- * Fill the arrays with the number os items per class and also a matrix with
- * references to the lines that belong to eacv class to simplify the
+ * Fill the arrays with the number of items per class and also a matrix with
+ * references to the lines that belong to each class to simplify the
  * calculation of the disjoint matrix
  */
 void fill_class_arrays(uint_fast64_t *dataset, uint_fast32_t *n_items_per_class,
 		uint_fast64_t **observations_per_class);
+
+/**
+ * Prints a line to stream
+ */
+void print_line(FILE *stream, const uint_fast64_t *line,
+		const uint_fast8_t extra_bits);
+
+/**
+ * Prints the whole dataset
+ */
+void print_dataset(FILE *stream, const char *title, uint_fast64_t *dataset,
+		const uint_fast8_t extra_bits);
 
 #endif

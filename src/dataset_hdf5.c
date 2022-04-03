@@ -9,7 +9,7 @@
 #include "dataset_hdf5.h"
 
 /**
- * Reads the dataset attributes and fills the global variables
+ * Fills the global dataset attributes from the values on the hdf5 dataset
  */
 int read_attributes(const hid_t dataset_id) {
 
@@ -99,7 +99,7 @@ int get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions) {
 }
 
 /**
- * Returns the dataset dimensions stored in the hdf5 dataset
+ * Fills the dataset dimensions from the values stored in the hdf5 dataset
  */
 void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions) {
 
@@ -113,13 +113,8 @@ void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions) {
 	H5Sclose(dataset_space_id);
 }
 
-/**
- * Reads the full dataset data to the array
- */
-herr_t read_dataset(const char *filename, const char *datasetname,
+herr_t setup_dataset(const char *filename, const char *datasetname,
 		uint_fast64_t **dataset) {
-
-	herr_t status = OK;
 
 	//Open the data file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -139,15 +134,9 @@ herr_t read_dataset(const char *filename, const char *datasetname,
 		return NOK;
 	}
 
-	/**
-	 * Read dataset attributes
-	 */
+	// FIll dataset attributes
 	if (read_attributes(dataset_id) != OK) {
-		fprintf(stderr, "Error readings attributes from dataset\n");
-
-		// Free resources
-		H5Dclose(dataset_id);
-		H5Fclose(file_id);
+		// Error reading attributes
 		return NOK;
 	}
 
@@ -168,7 +157,7 @@ herr_t read_dataset(const char *filename, const char *datasetname,
 	}
 
 	// Fill dataset from hdf5 file
-	status = H5Dread(dataset_id, H5T_NATIVE_ULONG, H5S_ALL, H5S_ALL,
+	herr_t status = H5Dread(dataset_id, H5T_NATIVE_ULONG, H5S_ALL, H5S_ALL,
 	H5P_DEFAULT, *dataset);
 	if (status < 0) {
 		fprintf(stderr, "Error reading the dataset data\n");

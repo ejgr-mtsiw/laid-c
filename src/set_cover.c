@@ -219,9 +219,8 @@ status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 
 #ifdef DEBUG
 		if (i > next_output) {
-			fprintf(stdout,
-					"[set_cover::blacklist_lines] Analysing line %lu of %lu.\n",
-					i + 1, n_lines);
+			fprintf(stdout, "[set_cover::blacklist_lines] %0.0f %%.\n",
+					((double) i) / n_lines * 100);
 			fflush( stdout);
 
 			next_output += n_lines / 10;
@@ -284,9 +283,8 @@ uint_fast32_t calculate_sum(const hid_t dataset_id,
 
 #ifdef DEBUG
 		if (i > next_output) {
-			fprintf(stdout,
-					"[set_cover::update_sum] Analysing line %lu of %lu.\n",
-					i + 1, n_lines);
+			fprintf(stdout, "[set_cover::update_sum] %0.0f%%.\n",
+					((double) i) / n_lines * 100);
 			fflush( stdout);
 
 			next_output += n_lines / 10;
@@ -302,16 +300,17 @@ uint_fast32_t calculate_sum(const hid_t dataset_id,
 
 void update_sum(const uint_fast64_t *buffer,
 		const uint_fast8_t *attribute_blacklist, uint_fast32_t *sum) {
+
 	// Current attribute
 	uint_fast32_t c = 0;
 
-	for (uint_fast32_t n = 0; n < g_n_longs && c < g_n_attributes; n++) {
+	for (uint_fast32_t n = 0; n < g_n_longs; n++) {
 		for (int_fast8_t bit = BLOCK_BITS - 1; c < g_n_attributes && bit >= 0;
 				bit--, c++) {
 
 			if (attribute_blacklist[c] == NOT_BLACKLISTED
 					&& (buffer[n] & AND_MASK_TABLE[bit])) {
-				// Add to cost
+				// Add to sum
 				sum[c]++;
 			}
 		}

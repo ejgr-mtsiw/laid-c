@@ -15,12 +15,12 @@
 #include <malloc.h>
 #include <stdint.h>
 
-#define DATASET_INVALID_DIMENSIONS 1
-#define DATASET_NOT_ENOUGH_CLASSES 2
-#define DATASET_NOT_ENOUGH_ATTRIBUTES 3
-#define DATASET_NOT_ENOUGH_OBSERVATIONS 4
+#define DATASET_INVALID_DIMENSIONS 5
+#define DATASET_NOT_ENOUGH_CLASSES 6
+#define DATASET_NOT_ENOUGH_ATTRIBUTES 7
+#define DATASET_NOT_ENOUGH_OBSERVATIONS 8
 
-#define ERROR_ALLOCATING_DATASET_DATA 1
+#define ERROR_ALLOCATING_DATASET_DATA 9
 
 /**
  * Number of ranks for data
@@ -49,9 +49,9 @@ int get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions);
 void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions);
 
 /**
- * Reads the full dataset data to the array
+ * Fills the dataset atributes, allocates and fills the dataset array
  */
-herr_t read_dataset(const char *filename, const char *datasetname,
+herr_t setup_dataset(const char *filename, const char *datasetname,
 		uint_fast64_t **dataset);
 
 #endif

@@ -70,7 +70,7 @@ void print_dataset(FILE *stream, const char *title, uint_fast64_t *dataset,
 	for (uint_fast32_t i = 0; i < g_n_observations; i++) {
 		print_line(stream, line, extra_bits);
 		fprintf(stream, "\n");
-		NEXT(line);
+		NEXT_LINE(line);
 
 		if (g_n_observations > 20 && i == 9) {
 			fprintf(stream, " ... \n");
@@ -136,10 +136,6 @@ uint_fast8_t has_same_attributes(const uint_fast64_t *a, const uint_fast64_t *b)
 	return 1;
 }
 
-/**
- * Removes duplicated lines from the dataset.
- * Assumes the dataset is ordered
- */
 uint_fast32_t remove_duplicates(uint_fast64_t *dataset) {
 
 	uint_fast64_t *line = dataset;
@@ -148,9 +144,9 @@ uint_fast32_t remove_duplicates(uint_fast64_t *dataset) {
 	uint_fast32_t n_uniques = 1;
 
 	for (uint_fast32_t i = 0; i < g_n_observations - 1; i++) {
-		NEXT(line);
+		NEXT_LINE(line);
 		if (compare_lines(line, last) != 0) {
-			NEXT(last);
+			NEXT_LINE(last);
 			n_uniques++;
 			if (last != line) {
 				memcpy(last, line, sizeof(uint_fast64_t) * g_n_longs);
@@ -187,6 +183,6 @@ void fill_class_arrays(uint_fast64_t *dataset, uint_fast32_t *n_items_per_class,
 
 		n_items_per_class[clas]++;
 
-		NEXT(line);
+		NEXT_LINE(line);
 	}
 }

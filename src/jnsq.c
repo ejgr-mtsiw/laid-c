@@ -94,8 +94,8 @@ uint_fast8_t add_jnsqs(uint_fast64_t *dataset) {
 	set_jnsq_bits(current, 0);
 
 	// Now do the others
-	for (prev = dataset; prev < last; NEXT(prev)) {
-		NEXT(current);
+	for (prev = dataset; prev < last; NEXT_LINE(prev)) {
+		NEXT_LINE(current);
 
 		if (has_same_attributes(current, prev)) {
 			// Inconsistency!

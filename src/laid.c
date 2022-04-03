@@ -40,8 +40,8 @@ int main(int argc, char **argv) {
 	 */
 	uint_fast64_t *dataset = NULL;
 
-	// Read the dataset into memory
-	herr_t status = read_dataset(args.filename, args.datasetname, &dataset);
+	//
+	herr_t status = setup_dataset(args.filename, args.datasetname, &dataset);
 	if (status != OK) {
 		// TODO: Error
 		fprintf(stderr, " Error Status= %d \n", status);
@@ -117,11 +117,10 @@ int main(int argc, char **argv) {
 	unsigned long long original_matrixsize = calculate_number_of_lines(
 			n_items_per_class) * (g_n_attributes + g_n_bits_for_class);
 
-	char *unit = "bytes";
-	double matrixsize = original_matrixsize / 8;
+	double matrixsize = original_matrixsize / (1024 * 1024 * 8);
 
-	fprintf(stdout, "Estimated disjoint matrix filesize: %f%s", matrixsize,
-			unit);
+	fprintf(stdout, "Estimated disjoint matrix filesize: %0.2fMB\n",
+			matrixsize);
 
 	fflush(stdout);
 
