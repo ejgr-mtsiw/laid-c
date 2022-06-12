@@ -265,10 +265,8 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 					for (int bit = BLOCK_BITS - 1; c < n_attributes && bit >= 0;
 							bit--, c++) {
 
-						if (buffer[l] & AND_MASK_TABLE[bit]) {
-							// Add to sum
-							sum[c]--;
-						}
+						// Subtract from total sum
+						sum[c] -= !!(buffer[l] & AND_MASK_TABLE[bit]);
 					}
 				}
 			}
@@ -344,10 +342,8 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 			for (int bit = BLOCK_BITS - 1; c < n_attributes && bit >= 0;
 					bit--, c++) {
 
-				if (buffer[n] & AND_MASK_TABLE[bit]) {
-					// Add to sum
-					sum[c]++;
-				}
+				// Add to sum
+				sum[c] += !!(buffer[n] & AND_MASK_TABLE[bit]);
 			}
 		}
 
