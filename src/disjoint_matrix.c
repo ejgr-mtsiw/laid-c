@@ -11,13 +11,18 @@
 /**
  * Calculates the number of lines for the disjoint matrix
  */
-uint_fast64_t calculate_number_of_lines(const uint_fast32_t *n_items_per_class) {
+unsigned long calculate_number_of_lines_of_disjoint_matrix(
+		const dataset_t *dataset) {
 	// Calculate number of lines for the matrix
-	uint_fast64_t n_lines = 0;
+	unsigned long n_lines = 0;
 
-	for (uint_fast8_t i = 0; i < g_n_classes - 1; i++) {
-		for (uint_fast8_t j = i + 1; j < g_n_classes; j++) {
-			n_lines += n_items_per_class[i] * n_items_per_class[j];
+	unsigned int n_classes = dataset->n_classes;
+	unsigned int *n_observations_per_class = dataset->n_observations_per_class;
+
+	for (unsigned int i = 0; i < n_classes - 1; i++) {
+		for (unsigned int j = i + 1; j < n_classes; j++) {
+			n_lines += n_observations_per_class[i]
+					* n_observations_per_class[j];
 		}
 	}
 
@@ -30,8 +35,7 @@ uint_fast64_t calculate_number_of_lines(const uint_fast32_t *n_items_per_class) 
  * and will do nothing
  */
 herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
-		const uint_fast32_t *n_items_per_class,
-		uint_fast64_t **observations_per_class) {
+		const dataset_t *dataset) {
 
 	// Open file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -39,7 +43,7 @@ herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
 		// Error creating file
 		fprintf(stderr, "Error opening file %s\n", filename);
 
-		return NOK;
+		return -1;
 	}
 
 	// Open dataset
@@ -51,39 +55,56 @@ herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
 		// Dataset does not exist
 		fprintf(stdout, "Matrix dataset not found. Creating new\n");
 
-		if (create_new_disjoint_matrix_dataset(file_id, n_items_per_class,
-				observations_per_class) != OK) {
+		if (create_disjoint_matrix_dataset(file_id, dataset) != 0) {
 
 			fprintf(stderr, "Error creating new disjoint matrix dataset\n");
 
 			H5Fclose(file_id);
 
-			return NOK;
+			return -1;
 		}
 	}
 
 	H5Fclose(file_id);
 
-	return OK;
+	return 0;
 }
 
 /**
  * Creates a new disjoint matrix dataset
  */
-uint_fast8_t create_new_disjoint_matrix_dataset(hid_t file_id,
-		const uint_fast32_t *n_items_per_class,
-		uint_fast64_t **observations_per_class) {
+herr_t create_disjoint_matrix_dataset(const hid_t file_id,
+		const dataset_t *dataset) {
 
-	uint_fast64_t n_lines = calculate_number_of_lines(n_items_per_class);
+	// Number of longs in a line
+	unsigned int n_longs = dataset->n_longs;
+
+	// Number of attributes
+	//unsigned int n_attributes = dataset->n_attributes;
+
+	// Number of observations
+	unsigned int n_observations = dataset->n_observations;
+
+	// Number of classes
+	unsigned int n_classes = dataset->n_classes;
+
+	// Observations per class
+	unsigned long **observations_per_class = dataset->observations_per_class;
+
+	// Number of observations per class
+	unsigned int *n_observations_per_class = dataset->n_observations_per_class;
+
+	unsigned long n_lines = calculate_number_of_lines_of_disjoint_matrix(
+			dataset);
 
 	// Dataset dimensions
-	hsize_t dm_dimensions[2] = { n_lines, g_n_longs };
+	hsize_t dm_dimensions[2] = { n_lines, n_longs };
 
 	hid_t dm_dataset_space_id = H5Screate_simple(2, dm_dimensions, NULL);
 	if (dm_dataset_space_id < 0) {
 		// Error creating file
 		fprintf(stderr, "Error creating dataset space\n");
-		return NOK;
+		return -1;
 	}
 
 	// Create a dataset creation property list
@@ -92,17 +113,17 @@ uint_fast8_t create_new_disjoint_matrix_dataset(hid_t file_id,
 
 	// The choice of the chunk size affects performance!
 	// for now we will choose one line
-	hsize_t dm_chunk_dimensions[2] = { 1, g_n_longs };
+	hsize_t dm_chunk_dimensions[2] = { 1, n_longs };
 
 	H5Pset_chunk(dm_property_list_id, 2, dm_chunk_dimensions);
 
 	// Create the dataset
 	hid_t dm_dataset_id = H5Dcreate2(file_id, DISJOINT_MATRIX_DATASET_NAME,
-	H5T_STD_U64BE, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
+	H5T_NATIVE_ULONG, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
 	H5P_DEFAULT);
 	if (dm_dataset_id < 0) {
 		fprintf(stderr, "Error creating disjoint matrix dataset\n");
-		return NOK;
+		return -1;
 	}
 
 	// Close resources
@@ -113,22 +134,23 @@ uint_fast8_t create_new_disjoint_matrix_dataset(hid_t file_id,
 	NULL);
 
 	// Alocate buffer
-	uint_fast64_t *buffer = (uint_fast64_t*) malloc(
-			sizeof(uint_fast64_t) * dm_chunk_dimensions[1]);
+	unsigned long *buffer = (unsigned long*) malloc(
+			sizeof(unsigned long) * dm_chunk_dimensions[1]);
 
 	// We will write one line at a time
 	hsize_t count[2] = { 1, dm_chunk_dimensions[1] };
 	hsize_t offset[2] = { 0, 0 };
 
 	// Current line
-	for (uint_fast8_t i = 0; i < g_n_classes - 1; i++) {
-		for (uint_fast8_t j = i + 1; j < g_n_classes; j++) {
-			for (uint_fast32_t n_i = i * g_n_observations;
-					n_i < i * g_n_observations + n_items_per_class[i]; n_i++) {
-				for (uint_fast32_t n_j = j * g_n_observations;
-						n_j < j * g_n_observations + n_items_per_class[j];
+	for (unsigned int i = 0; i < n_classes - 1; i++) {
+		for (unsigned int j = i + 1; j < n_classes; j++) {
+			for (unsigned int n_i = i * n_observations;
+					n_i < i * n_observations + n_observations_per_class[i];
+					n_i++) {
+				for (unsigned int n_j = j * n_observations;
+						n_j < j * n_observations + n_observations_per_class[j];
 						n_j++) {
-					for (uint_fast32_t n = 0; n < g_n_longs; n++) {
+					for (unsigned int n = 0; n < n_longs; n++) {
 						buffer[n] = observations_per_class[n_i][n]
 								^ observations_per_class[n_j][n];
 					}
@@ -156,5 +178,5 @@ uint_fast8_t create_new_disjoint_matrix_dataset(hid_t file_id,
 
 	H5Dclose(dm_dataset_id);
 
-	return OK;
+	return 0;
 }

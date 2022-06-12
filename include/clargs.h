@@ -22,7 +22,7 @@
 /**
  * Structure to store command line options
  */
-typedef struct clargs {
+typedef struct clargs_t {
 	/**
 	 * The name of the dataset file
 	 */
@@ -32,11 +32,11 @@ typedef struct clargs {
 	 * The dataset identifier
 	 */
 	char *datasetname;
-} clargs;
+} clargs_t;
 
 /**
  *
  */
-int read_args(int argc, char **argv, clargs *args);
+int read_args(int argc, char **argv, clargs_t *args);
 
 #endif

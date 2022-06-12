@@ -9,18 +9,12 @@
 #ifndef DATASET_HDF5_H
 #define DATASET_HDF5_H
 
+#include "dataset.h"
 #include "globals.h"
 #include "hdf5.h"
 #include <math.h>
 #include <malloc.h>
 #include <stdint.h>
-
-#define DATASET_INVALID_DIMENSIONS 5
-#define DATASET_NOT_ENOUGH_CLASSES 6
-#define DATASET_NOT_ENOUGH_ATTRIBUTES 7
-#define DATASET_NOT_ENOUGH_OBSERVATIONS 8
-
-#define ERROR_ALLOCATING_DATASET_DATA 9
 
 /**
  * Number of ranks for data
@@ -28,9 +22,24 @@
 #define DATA_RANK 2
 
 /**
- * Reads the dataset attributes and fills the global variables
+ * Attribute for number of classes
  */
-int read_attributes(const hid_t dataset_id);
+#define HDF5_N_CLASSES_ATTRIBUTE "n_classes"
+
+/**
+ * Attribute for number of attributes
+ */
+#define HDF5_N_ATTRIBUTES_ATTRIBUTE "n_attributes"
+
+/**
+ * Attribute for number of observations
+ */
+#define HDF5_N_OBSERVATIONS_ATTRIBUTE "n_observations"
+
+/**
+ * Reads the dataset attributes from the hdf5 file
+ */
+herr_t read_attributes(const hid_t dataset_id, dataset_t *dataset);
 
 /**
  * Reads the value of one attribute from the dataset
@@ -39,19 +48,26 @@ herr_t read_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
 		void *value);
 
 /**
+ * Writes an attribute to the dataset
+ */
+herr_t write_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
+		const void *value);
+
+/**
  * Reads chunk dimensions from dataset if chunking was enabled
  */
 int get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions);
 
-/**
- * Returns the dataset dimensions stored in the hdf5 dataset
- */
-void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions);
-
-/**
- * Fills the dataset atributes, allocates and fills the dataset array
- */
-herr_t setup_dataset(const char *filename, const char *datasetname,
-		uint_fast64_t **dataset);
+///**
+// * Returns the dataset dimensions stored in the hdf5 dataset
+// */
+//void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions);
+//
+///**
+// * Calculates the dataset dimensions based on the number
+// * of observations and attributes
+// */
+//int calculate_dataset_dimensions(dataset_t *dataset,
+//		hsize_t *dataset_dimensions);
 
 #endif

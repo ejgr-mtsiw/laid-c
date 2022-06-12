@@ -13,71 +13,135 @@
 #include "globals.h"
 #include "hdf5.h"
 #include <math.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
+//
+#define NOT_BLACKLISTED false
+#define BLACKLISTED true
+
+#define DATASET_OK 0
+#define DATASET_INVALID_DIMENSIONS 1
+#define DATASET_NOT_ENOUGH_CLASSES 2
+#define DATASET_NOT_ENOUGH_ATTRIBUTES 4
+#define DATASET_NOT_ENOUGH_OBSERVATIONS 8
+#define DATASET_ERROR_ALLOCATING_DATA 16
+
 // Used in debugging
 #ifdef DEBUG
-#define DEBUG_PRINT_DATASET(stream, title,dataset, extra) print_dataset(stream, title, dataset, extra);
+//#define DEBUG_PRINT_DATASET(stream, title,dataset, extra) print_dataset(stream, title, dataset, extra);
+#define DEBUG_PRINT_DATASET(stream, title,dataset, extra)
 #else
 #define DEBUG_PRINT_DATASET(stream, title,dataset, extra)
 #endif
 
-#define WITHOUT_EXTRA_BITS 0
-#define WITH_EXTRA_BITS 1
+#define PRINT_WITHOUT_EXTRA_BITS false
+#define PRINT_WITH_EXTRA_BITS true
 
 /**
  *
  */
 
-#define NEXT_LINE(line) ((line) += (g_n_longs))
+#define NEXT_LINE(line, n_longs) ((line) += (n_longs))
 
-#define GET_NEXT_OBSERVATION(line) ((line) + (g_n_longs))
-#define GET_PREV_OBSERVATION(line) ((line) - (g_n_longs))
+//#define GET_NEXT_OBSERVATION(line, n_longs) ((line) + (n_longs))
+//#define GET_PREV_OBSERVATION(line, n_longs) ((line) - (n_longs))
 
-#define GET_LAST_OBSERVATION(dset) ((dset) + ((g_n_observations - 1) * g_n_longs))
+#define GET_LAST_OBSERVATION(dset, n_observations, n_longs) ((dset) + ((n_observations - 1) * n_longs))
+
+typedef struct dataset_t {
+	/**
+	 * Number of attributes
+	 */
+	unsigned int n_attributes;
+
+	/**
+	 * Number of longs (64bits) needed to store a line
+	 */
+	unsigned int n_longs;
+
+	/**
+	 * Number of bits needed to store jnsqs
+	 */
+	unsigned int n_bits_for_jnsqs;
+
+	/**
+	 * Number of observations
+	 */
+	unsigned int n_observations;
+
+	/**
+	 * Number of classes
+	 */
+	unsigned int n_classes;
+
+	/**
+	 * Number of bits used to store the class
+	 */
+	unsigned int n_bits_for_class;
+
+	/**
+	 * Dataset data
+	 */
+	unsigned long *data;
+
+	/**
+	 * Array with number of observations per class
+	 */
+	unsigned int *n_observations_per_class;
+
+	/**
+	 * Array with pointers for each observation per class.
+	 * They reference lines in *data
+	 */
+	unsigned long **observations_per_class;
+
+} dataset_t;
 
 /**
  * Returns the class of this data line
  */
-uint_fast8_t get_class(const uint_fast64_t *line);
+unsigned int get_class(const unsigned long *line,
+		const unsigned int n_attributes, const unsigned int n_longs,
+		const unsigned int n_bits_for_class);
 
 /**
  * Compares two lines of the dataset
  * Used to sort the dataset
  */
-int compare_lines(const void *a, const void *b);
+//int compare_lines(const void *a, const void *b);
+int compare_lines_extra(const void *a, const void *b, void *n_longs);
 
 /**
  * Checks if the lines have the same attributes
  */
-uint_fast8_t has_same_attributes(const uint_fast64_t *a, const uint_fast64_t *b);
+bool has_same_attributes(const unsigned long *a, const unsigned long *b,
+		const unsigned int n_attributes, const unsigned long n_longs);
 
 /**
  * Removes duplicated lines from the dataset.
  * Assumes the dataset is ordered
- * Returns number of unique observations
+ * Returns number of removed observations
  */
-uint_fast32_t remove_duplicates(uint_fast64_t *dataset);
+unsigned int remove_duplicates(dataset_t *dataset);
 
 /**
  * Fill the arrays with the number of items per class and also a matrix with
  * references to the lines that belong to each class to simplify the
  * calculation of the disjoint matrix
  */
-void fill_class_arrays(uint_fast64_t *dataset, uint_fast32_t *n_items_per_class,
-		uint_fast64_t **observations_per_class);
+void fill_class_arrays(dataset_t *dataset);
 
 /**
  * Prints a line to stream
  */
-void print_line(FILE *stream, const uint_fast64_t *line,
-		const uint_fast8_t extra_bits);
+void print_line(FILE *stream, const unsigned long *line, const bool extra_bits);
 
 /**
  * Prints the whole dataset
  */
-void print_dataset(FILE *stream, const char *title, uint_fast64_t *dataset,
-		const uint_fast8_t extra_bits);
+void print_dataset(FILE *stream, const char *title, dataset_t *dataset,
+		const bool extra_bits);
 
 #endif

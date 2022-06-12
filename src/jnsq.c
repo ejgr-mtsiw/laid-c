@@ -21,21 +21,23 @@
  * Inconsistentes em ambiente HDF5+ Python na cloud INCD. Revista de
  * Ciências da Computação, 85-112.
  */
-void set_jnsq_bits(uint_fast64_t *line, uint_fast8_t inconsistency) {
+void set_jnsq_bits(unsigned long *line, unsigned int inconsistency,
+		const unsigned int n_attributes, const unsigned int n_longs,
+		const unsigned int n_bits_for_class) {
 
 	// Check how many attributes remain
-	uint_fast8_t remaining_attributes = g_n_attributes % BLOCK_BITS;
+	unsigned char remaining_attributes = n_attributes % BLOCK_BITS;
 
 	// Jnsq starts after this bit
-	uint_fast8_t jnsq_start = BLOCK_BITS - remaining_attributes;
+	unsigned char jnsq_start = BLOCK_BITS - remaining_attributes;
 
-	uint_fast64_t last_long = line[g_n_longs - 1];
+	unsigned long last_long = line[n_longs - 1];
 
 	last_long >>= jnsq_start;
 
-	uint_fast8_t i = 0;
+	unsigned char i = 0;
 
-	for (i = 0; inconsistency > 0 && i < g_n_bits_for_class; i++) {
+	for (i = 0; inconsistency > 0 && i < n_bits_for_class; i++) {
 		last_long <<= 1;
 
 		if (inconsistency & 1) {
@@ -47,57 +49,71 @@ void set_jnsq_bits(uint_fast64_t *line, uint_fast8_t inconsistency) {
 
 	last_long <<= jnsq_start - i;
 
-	line[g_n_longs - 1] = last_long;
+	line[n_longs - 1] = last_long;
 }
 
 /**
  * Compares 2 lines and updates jnsq on to_update if needed and updates
  * inconsistency level
  */
-void update_jnsq(uint_fast64_t *to_update, const uint_fast64_t *to_compare,
-		uint_fast8_t *inconsistency) {
+void update_jnsq(unsigned long *to_update, const unsigned long *to_compare,
+		unsigned int *inconsistency, const unsigned int n_attributes,
+		const unsigned int n_longs, const unsigned int n_bits_for_class) {
 
 	// Set the line JNSQ
-	set_jnsq_bits(to_update, (*inconsistency));
+	set_jnsq_bits(to_update, (*inconsistency), n_attributes, n_longs,
+			n_bits_for_class);
 
-	if (has_same_attributes(to_update, to_compare)) {
+	if (has_same_attributes(to_update, to_compare, n_attributes, n_longs)) {
 		// Inconsistency!
 		(*inconsistency)++; //Because observations are sorted by class
 	} else {
 		// Differente attributes - reset JNSQ
 		(*inconsistency) = 0;
 	}
-
 }
 
 /**
  * Adds the JNSQs attributes to the dataset
  */
-uint_fast8_t add_jnsqs(uint_fast64_t *dataset) {
+unsigned int add_jnsqs(dataset_t *dataset) {
 
 	// Current line
-	uint_fast64_t *current = dataset;
+	unsigned long *current = dataset->data;
 
 	// Previous line
-	uint_fast64_t *prev = dataset;
+	unsigned long *prev = current;
+
+	// Number of attributes
+	unsigned int n_attributes = dataset->n_attributes;
+
+	// Number of longs in a line
+	unsigned int n_longs = dataset->n_longs;
+
+	// Number of observations in the dataset
+	unsigned int n_observations = dataset->n_observations;
+
+	// Number of bits needed to store class
+	unsigned int n_bits_for_class = dataset->n_bits_for_class;
 
 	// Last line
-	uint_fast64_t *last = GET_LAST_OBSERVATION(dataset);
+	unsigned long *last = GET_LAST_OBSERVATION(dataset->data, n_observations,
+			n_longs);
 
 	// Inconsistency
-	uint_fast8_t inconsistency = 0;
+	unsigned int inconsistency = 0;
 
 	// Max inconsistency found
-	uint_fast8_t max_inconsistency = 0;
+	unsigned int max_inconsistency = 0;
 
 	// first line has jnsq=0
-	set_jnsq_bits(current, 0);
+	set_jnsq_bits(current, 0, n_attributes, n_longs, n_bits_for_class);
 
 	// Now do the others
-	for (prev = dataset; prev < last; NEXT_LINE(prev)) {
-		NEXT_LINE(current);
+	for (prev = dataset->data; prev < last; NEXT_LINE(prev, n_longs)) {
+		NEXT_LINE(current, n_longs);
 
-		if (has_same_attributes(current, prev)) {
+		if (has_same_attributes(current, prev, n_attributes, n_longs)) {
 			// Inconsistency!
 			inconsistency++; //Because observations are sorted by class
 
@@ -111,7 +127,17 @@ uint_fast8_t add_jnsqs(uint_fast64_t *dataset) {
 		}
 
 		// Set the line JNSQ
-		set_jnsq_bits(current, inconsistency);
+		set_jnsq_bits(current, inconsistency, n_attributes, n_longs,
+				n_bits_for_class);
+	}
+
+	// Update number of attributes to include the new JNSQs
+	if (max_inconsistency > 0) {
+		// How many bits are needed for jnsq attributes
+		unsigned int n_bits_for_jnsq = ceil(log2(max_inconsistency + 1));
+
+		dataset->n_attributes += n_bits_for_jnsq;
+		dataset->n_bits_for_jnsqs = n_bits_for_jnsq;
 	}
 
 	return max_inconsistency;

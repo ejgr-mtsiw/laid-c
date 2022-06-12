@@ -8,7 +8,7 @@
 
 #include "clargs.h"
 
-int read_args(int argc, char **argv, clargs *args) {
+int read_args(int argc, char **argv, clargs_t *args) {
 	int c = 0;
 
 	opterr = 0;

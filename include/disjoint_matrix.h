@@ -9,6 +9,7 @@
 #ifndef DISJOINT_MATRIX_H
 #define DISJOINT_MATRIX_H
 
+#include "dataset.h"
 #include "globals.h"
 #include "hdf5.h"
 #include <malloc.h>
@@ -22,20 +23,19 @@
 /**
  * Calculates the number of lines for the disjoint matrix
  */
-uint_fast64_t calculate_number_of_lines(const uint_fast32_t *n_items_per_class);
+unsigned long calculate_number_of_lines_of_disjoint_matrix(
+		const dataset_t *dataset);
 
 /**
  * Builds the disjoint matrix and saves it to the hdf5 dataset file
  */
 herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
-		const uint_fast32_t *n_items_per_class,
-		uint_fast64_t **observations_per_class);
+		const dataset_t *dataset);
 
 /**
  * Creates a new disjoint matrix dataset
  */
-status_t create_new_disjoint_matrix_dataset(hid_t file_id,
-		const uint_fast32_t *n_items_per_class,
-		uint_fast64_t **observations_per_class);
+herr_t create_disjoint_matrix_dataset(const hid_t file_id,
+		const dataset_t *dataset);
 
 #endif

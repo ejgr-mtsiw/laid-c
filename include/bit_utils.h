@@ -12,7 +12,7 @@
 #include <limits.h>
 #include <stdint.h>
 
-static const uint_fast64_t AND_MASK_TABLE[64] = { 0x1, 0x2, 0x4, 0x8, 0x10,
+static const unsigned long AND_MASK_TABLE[64] = { 0x1, 0x2, 0x4, 0x8, 0x10,
 		0x20, 0x40, 0x80, 0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000,
 		0x8000, 0x10000, 0x20000, 0x40000, 0x80000, 0x100000, 0x200000,
 		0x400000, 0x800000, 0x1000000, 0x2000000, 0x4000000, 0x8000000,
@@ -46,14 +46,14 @@ static const uint_fast64_t AND_MASK_TABLE[64] = { 0x1, 0x2, 0x4, 0x8, 0x10,
 /**
  * https://stackoverflow.com/questions/1283221/algorithm-for-copying-n-bits-at-arbitrary-position-from-one-int-to-another
  */
-uint_fast64_t set_bits(const uint_fast64_t destination,
-		const uint_fast64_t source, const uint_fast8_t at,
-		const uint_fast8_t numbits);
+unsigned long set_bits(const unsigned long destination,
+		const unsigned long source, const unsigned char at,
+		const unsigned char numbits);
 
 /**
  * Return numbits from source starting at at
  */
-uint_fast64_t get_bits(const uint_fast64_t source, const uint_fast8_t at,
-		const uint_fast8_t numbits);
+unsigned long get_bits(const unsigned long source, const unsigned char at,
+		const unsigned char numbits);
 
 #endif

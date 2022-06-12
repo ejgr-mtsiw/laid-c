@@ -16,32 +16,58 @@
 #include <stdint.h>
 #include <string.h>
 
+typedef struct cover_t {
+	/**
+	 * The base dataset
+	 */
+	dataset_t *dataset;
+
+	/**
+	 * Number of lines of the disjoint matrix
+	 */
+	unsigned long matrix_n_lines;
+
+	/**
+	 * Array of bllacklisted lines
+	 */
+	unsigned char *line_blacklist;
+
+	/**
+	 * Array of blacklisted attributes
+	 */
+	unsigned char *attribute_blacklist;
+
+	/**
+	 * Array with the current totals for all attributes
+	 */
+	unsigned int *sum;
+
+} cover_t;
+
 /**
  * Applies the set cover algorithm to the hdf5 dataset and prints
  * the minimum attribute set that covers all the lines
  */
-status_t calculate_solution(const char *filename, const char *datasetname,
-		const uint_fast32_t *n_items_per_class);
+herr_t calculate_solution(const char *filename, const char *datasetname,
+		cover_t *cover);
 
 /**
  * Reads the disjoint matrix dataset and blacklists the lines that
  * depend on the attribute to blacklist
  */
-status_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
-		const hid_t memory_space_id, const uint_fast32_t n_lines,
-		const uint_fast32_t attribute_to_blacklist,
-		uint_fast8_t *line_blacklist);
+herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
+		const hid_t memory_space_id, const cover_t *cover,
+		const unsigned int attribute_to_blacklist);
 
 /**
- * Finds the next attribute to blacklist
+ * Calculates the initial totals for all attributes
  */
-uint_fast32_t calculate_sum(const hid_t dataset_id,
+unsigned int calculate_initial_sum(const hid_t dataset_id,
 		const hid_t dataset_space_id, const hid_t memory_space_id,
-		const uint_fast32_t n_lines, const uint_fast8_t *line_blacklist,
-		const uint_fast8_t *attribute_blacklist, uint_fast32_t *sum);
+		const cover_t *cover);
 
-void update_sum(const uint_fast64_t *buffer,
-		const uint_fast8_t *attribute_blacklist, uint_fast32_t *sum);
+//void update_sum(const unsigned long *buffer,
+//		const unsigned char *attribute_blacklist);
 
 /**
  * Releases resources handles
