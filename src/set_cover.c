@@ -246,19 +246,22 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 					H5P_DEFAULT, buffer);
 
 			if (buffer[n] & AND_MASK_TABLE[bit]) {
+
 				// The bit is set: Blacklist this line
 				line_blacklist[i] = BLACKLISTED;
 				n_blacklisted_lines++;
 
+				// Update sum removing the contribution from this line
 				for (unsigned int l = 0; l < n_longs; l++) {
-
 					c_long = buffer[l];
 					c_attribute = l * BLOCK_BITS;
 
-					while (c_long > 0 && c_attribute < n_attributes) {
-						sum[c_attribute] -= !!(c_long & 0x8000000000000000);
-						c_long <<= 1;
-						c_attribute++;
+					for (int bit = BLOCK_BITS - 1;
+							c_attribute < n_attributes && bit >= 0;
+							bit--, c_attribute++) {
+
+						// Update sum
+						sum[c_attribute] -= !!(c_long & AND_MASK_TABLE[bit]);
 					}
 				}
 			}
@@ -313,6 +316,12 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 	hsize_t offset[2] = { 0, 0 };
 	hsize_t count[2] = { 1, n_longs };
 
+	// Current long
+	unsigned long c_long = 0;
+
+	// Current attribute
+	unsigned int c_attribute = 0;
+
 	// Calculate totals
 	for (unsigned int i = 0; i < n_lines; i++) {
 
@@ -327,21 +336,16 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 		H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id, dataset_space_id,
 		H5P_DEFAULT, buffer);
 
-		// Current long
-		unsigned long c_long = 0;
-
-		// Current attribute
-		unsigned int c_attribute = 0;
-
 		for (unsigned int l = 0; l < n_longs; l++) {
-
 			c_long = buffer[l];
 			c_attribute = l * BLOCK_BITS;
 
-			while (c_long > 0 && c_attribute < n_attributes) {
-				sum[c_attribute] += !!(c_long & 0x8000000000000000);
-				c_long <<= 1;
-				c_attribute++;
+			for (int bit = BLOCK_BITS - 1;
+					bit >= 0 && c_attribute < n_attributes;
+					bit--, c_attribute++) {
+
+				// Add to sum
+				sum[c_attribute] += !!(c_long & AND_MASK_TABLE[bit]);
 			}
 		}
 
