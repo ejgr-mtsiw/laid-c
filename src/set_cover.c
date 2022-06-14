@@ -206,18 +206,10 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	// Number of attributes
 	unsigned int n_attributes = cover->dataset->n_attributes;
 
-	// Number of observations
-//	unsigned int n_observations = cover->dataset->n_observations;
-
-	// Number of classes
-//	unsigned int n_classes = cover->dataset->n_classes;
-
 	// Calculate number of lines of disjoint matrix
 	unsigned long n_lines = cover->matrix_n_lines;
 
 	unsigned char *line_blacklist = cover->line_blacklist;
-
-//	unsigned char *attribute_blacklist = cover->attribute_blacklist;
 
 	unsigned int *sum = cover->sum;
 
@@ -230,6 +222,12 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	hsize_t count[2] = { 1, n_longs };
 
 	unsigned int n_blacklisted_lines = 0;
+
+	// Current long
+	unsigned long c_long = 0;
+
+	// Current attribute
+	unsigned long c_attribute = 0;
 
 	for (unsigned int i = 0; i < n_lines; i++) {
 
@@ -252,21 +250,15 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 				line_blacklist[i] = BLACKLISTED;
 				n_blacklisted_lines++;
 
-				// Subtract this line contrinution from total
-				unsigned int c = 0;
-
 				for (unsigned int l = 0; l < n_longs; l++) {
 
-					if (buffer[l] == 0UL) {
-						c += BLOCK_BITS;
-						continue;
-					}
+					c_long = buffer[l];
+					c_attribute = l * BLOCK_BITS;
 
-					for (int bit = BLOCK_BITS - 1; c < n_attributes && bit >= 0;
-							bit--, c++) {
-
-						// Subtract from total sum
-						sum[c] -= !!(buffer[l] & AND_MASK_TABLE[bit]);
+					while (c_long > 0 && c_attribute < n_attributes) {
+						sum[c_attribute] -= !!(c_long & 0x8000000000000000);
+						c_long <<= 1;
+						c_attribute++;
 					}
 				}
 			}
@@ -335,15 +327,21 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 		H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id, dataset_space_id,
 		H5P_DEFAULT, buffer);
 
+		// Current long
+		unsigned long c_long = 0;
+
 		// Current attribute
-		unsigned int c = 0;
+		unsigned int c_attribute = 0;
 
-		for (unsigned int n = 0; n < n_longs; n++) {
-			for (int bit = BLOCK_BITS - 1; c < n_attributes && bit >= 0;
-					bit--, c++) {
+		for (unsigned int l = 0; l < n_longs; l++) {
 
-				// Add to sum
-				sum[c] += !!(buffer[n] & AND_MASK_TABLE[bit]);
+			c_long = buffer[l];
+			c_attribute = l * BLOCK_BITS;
+
+			while (c_long > 0 && c_attribute < n_attributes) {
+				sum[c_attribute] += !!(c_long & 0x8000000000000000);
+				c_long <<= 1;
+				c_attribute++;
 			}
 		}
 
