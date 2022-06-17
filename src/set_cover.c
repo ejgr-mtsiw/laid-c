@@ -131,7 +131,7 @@ int calculate_solution(const char *filename, const char *datasetname,
 			}
 		}
 
-		if (max_total <= 0) {
+		if (max_total == 0) {
 			// Nothing else to do here: we have a solution that covers the
 			// full disjoint matrix
 			break;
@@ -139,7 +139,7 @@ int calculate_solution(const char *filename, const char *datasetname,
 
 		// Blacklist attribute with max total
 		cover->attribute_blacklist[attribute_to_blacklist] = BLACKLISTED;
-		fprintf(stdout, "  - Blacklisted: %d\n", attribute_to_blacklist + 1);
+		fprintf(stdout, "  - Blacklisted: %d\n", attribute_to_blacklist);
 		fflush( stdout);
 
 		// Blacklist lines that have the blacklisted attribute set
