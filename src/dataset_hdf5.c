@@ -16,48 +16,70 @@ bool hdf5_dataset_exists(const hid_t file_id, const char *name) {
 /**
  * Reads the dataset attributes from the hdf5 file
  */
-int read_attributes(const hid_t dataset_id, dataset_t *dataset) {
+herr_t hdf5_read_dataset_attributes(const char *filename,
+		const char *datasetname, dataset_t *dataset) {
+
+	herr_t ret = DATASET_OK;
+
+	//Open the data file
+	hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file_id < 1) {
+		// Error creating file
+		fprintf(stderr, "Error opening file %s\n", filename);
+		return NOK;
+	}
+
+	// Open input dataset
+	hid_t dataset_id = H5Dopen2(file_id, datasetname, H5P_DEFAULT);
+	if (dataset_id < 1) {
+		// Error creating file
+		fprintf(stderr, "Dataset %s not found!\n", datasetname);
+		ret = NOK;
+		goto out_close_file;
+	}
 
 	unsigned int n_classes = 0;
-	read_attribute(dataset_id, HDF5_N_CLASSES_ATTRIBUTE, H5T_NATIVE_INT,
+	hdf5_read_attribute(dataset_id, HDF5_N_CLASSES_ATTRIBUTE, H5T_NATIVE_INT,
 			&n_classes);
 
 	if (n_classes < 2) {
 		fprintf(stderr, "Dataset must have at least 2 classes\n");
-		return DATASET_NOT_ENOUGH_CLASSES;
+		ret = DATASET_NOT_ENOUGH_CLASSES;
+		goto out_close_dataset;
 	}
 
 	unsigned int n_observations = 0;
 	// Number of observations (lines) in the dataset
-	read_attribute(dataset_id, HDF5_N_OBSERVATIONS_ATTRIBUTE, H5T_NATIVE_INT,
-			&n_observations);
+	hdf5_read_attribute(dataset_id, HDF5_N_OBSERVATIONS_ATTRIBUTE,
+	H5T_NATIVE_INT, &n_observations);
 
 	if (n_observations < 2) {
 		fprintf(stderr, "Dataset must have at least 2 observations\n");
-		return DATASET_NOT_ENOUGH_OBSERVATIONS;
+		ret = DATASET_NOT_ENOUGH_OBSERVATIONS;
+		goto out_close_dataset;
 	}
 
 	unsigned int n_attributes = 0;
 	// Number of attributes in the dataset
-	read_attribute(dataset_id, HDF5_N_ATTRIBUTES_ATTRIBUTE, H5T_NATIVE_INT,
+	hdf5_read_attribute(dataset_id, HDF5_N_ATTRIBUTES_ATTRIBUTE, H5T_NATIVE_INT,
 			&n_attributes);
 
 	if (n_attributes < 1) {
 		fprintf(stderr, "Dataset must have at least 1 attribute\n");
-		return DATASET_NOT_ENOUGH_ATTRIBUTES;
+		ret = DATASET_NOT_ENOUGH_ATTRIBUTES;
+		goto out_close_dataset;
 	}
 
 	// Store data
+	dataset->data = NULL;
+	dataset->n_observations_per_class = NULL;
+	dataset->observations_per_class = NULL;
 	dataset->n_attributes = n_attributes;
 	dataset->n_bits_for_class = (unsigned int) ceil(log2(n_classes));
-	dataset->n_bits_for_jnsqs = dataset->n_bits_for_class;
+	dataset->n_bits_for_jnsqs = 0;
 	dataset->n_classes = n_classes;
-	dataset->n_observations_per_class = NULL;
 	dataset->n_observations = n_observations;
-	dataset->data = NULL;
-	dataset->observations_per_class = NULL;
 
-	//! TODO: Remove duplicate code!
 	unsigned long total_bits = dataset->n_attributes
 			+ dataset->n_bits_for_class;
 	unsigned int n_longs = total_bits / BLOCK_BITS
@@ -65,20 +87,41 @@ int read_attributes(const hid_t dataset_id, dataset_t *dataset) {
 
 	dataset->n_longs = n_longs;
 
-	return DATASET_OK;
+	out_close_dataset: H5Dclose(dataset_id);
+
+	out_close_file: H5Fclose(file_id);
+
+	return ret;
 }
 
 /**
  * Reads the value of one attribute from the dataset
  */
-herr_t read_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
-		void *value) {
+herr_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
+		hid_t datatype, void *value) {
+
+	herr_t status = H5Aexists(dataset_id, attribute);
+	if (status < 0) {
+		// Error reading attribute
+		fprintf(stderr, "Error reading attribute %s", attribute);
+		return status;
+	}
+
+	if (status == 0) {
+		// Attribute does not exist
+		*(unsigned int*) value = 0;
+		return status;
+	}
 
 	// Open the attribute
 	hid_t attr = H5Aopen(dataset_id, attribute, H5P_DEFAULT);
+	if (attr < 0) {
+		fprintf(stderr, "Error closing the attribute %s", attribute);
+		return attr;
+	}
 
 	// read the attribute value
-	herr_t status = H5Aread(attr, datatype, value);
+	status = H5Aread(attr, datatype, value);
 	if (status < 0) {
 		fprintf(stderr, "Error reading attribute %s", attribute);
 		return status;

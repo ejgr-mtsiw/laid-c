@@ -45,6 +45,33 @@ int main(int argc, char **argv) {
 	 * READ AND SETUP DATASET
 	 */
 
+	// Fill dataset attributes
+	if (hdf5_read_dataset_attributes(args.filename, args.datasetname,
+			&dataset) != DATASET_OK) {
+		// Error reading attributes
+		return EXIT_FAILURE;
+	}
+
+	fprintf(stdout, "Dataset %s\n", args.datasetname);
+	fprintf(stdout, " - classes = %d ", dataset.n_classes);
+	fprintf(stdout, "[%d bits]\n", dataset.n_bits_for_class);
+	fprintf(stdout, " - attributes = %d \n", dataset.n_attributes);
+	fprintf(stdout, " - observations = %d \n", dataset.n_observations);
+
+	// Allocate main buffer
+	// https://vorpus.org/blog/why-does-calloc-exist/
+	/**
+	 * The dataset data
+	 */
+	dataset.data = (unsigned long*) calloc(
+			dataset.n_observations * dataset.n_longs, sizeof(unsigned long));
+	if (dataset.data == NULL) {
+		fprintf(stderr, "Error allocating dataset\n");
+
+		// Free resources
+		return EXIT_FAILURE;
+	}
+
 	//Open the data file
 	hid_t file_id = H5Fopen(args.filename, H5F_ACC_RDWR, H5P_DEFAULT);
 	if (file_id < 1) {
@@ -59,32 +86,6 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Dataset %s not found!\n", args.datasetname);
 
 		// Free resources
-		H5Fclose(file_id);
-		return EXIT_FAILURE;
-	}
-
-	// Fill dataset attributes
-	if (read_attributes(dataset_id, &dataset) != DATASET_OK) {
-		// Error reading attributes
-		return EXIT_FAILURE;
-	}
-
-	fprintf(stdout, " - classes = %d \n", dataset.n_classes);
-	fprintf(stdout, " - observations = %d \n", dataset.n_observations);
-	fprintf(stdout, " - attributes = %d \n", dataset.n_attributes);
-
-	// Allocate main buffer
-	// https://vorpus.org/blog/why-does-calloc-exist/
-	/**
-	 * The dataset data
-	 */
-	dataset.data = (unsigned long*) calloc(
-			dataset.n_observations * dataset.n_longs, sizeof(unsigned long));
-	if (dataset.data == NULL) {
-		fprintf(stderr, "Error allocating dataset\n");
-
-		// Free resources
-		H5Dclose(dataset_id);
 		H5Fclose(file_id);
 		return EXIT_FAILURE;
 	}

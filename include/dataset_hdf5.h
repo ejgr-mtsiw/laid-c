@@ -44,13 +44,14 @@ bool hdf5_dataset_exists(const hid_t file_id, const char *dataset);
 /**
  * Reads the dataset attributes from the hdf5 file
  */
-herr_t read_attributes(const hid_t dataset_id, dataset_t *dataset);
+herr_t hdf5_read_dataset_attributes(const char *filename,
+		const char *datasetname, dataset_t *dataset);
 
 /**
  * Reads the value of one attribute from the dataset
  */
-herr_t read_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
-		void *value);
+herr_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
+		hid_t datatype, void *value);
 
 /**
  * Writes an attribute to the dataset
