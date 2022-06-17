@@ -64,8 +64,10 @@ herr_t hdf5_read_hdf5_dataset(const char *filename, const char *datasetname,
 	}
 
 	if (data_to_read & READ_DATASET_DATA) {
-		fprintf(stderr, "Error reading data!\n");
 		ret = hdf5_read_data(dataset_id, dataset);
+		if (ret < 0) {
+			fprintf(stderr, "Error reading data!\n");
+		}
 	}
 
 	out_close_dataset: H5Dclose(dataset_id);
