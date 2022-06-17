@@ -10,9 +10,9 @@
 #define DISJOINT_MATRIX_H
 
 #include "dataset.h"
-#include "dataset_hdf5.h"
 #include "globals.h"
 #include "hdf5.h"
+#include "hdf5_dataset.h"
 #include <malloc.h>
 #include <stdint.h>
 

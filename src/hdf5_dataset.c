@@ -1,12 +1,12 @@
 /*
  ============================================================================
- Name        : dataset_hdf5.c
+ Name        : hdf5_dataset.c
  Author      : Eduardo Ribeiro
  Description : Structures and functions to manage HDF5 datasets
  ============================================================================
  */
 
-#include "dataset_hdf5.h"
+#include "hdf5_dataset.h"
 
 bool hdf5_dataset_exists(const hid_t file_id, const char *name) {
 
