@@ -153,3 +153,21 @@ void fill_class_arrays(dataset_t *dataset) {
 		NEXT_LINE(line, n_longs);
 	}
 }
+
+void print_dataset_details(FILE *stream, const dataset_t *dataset) {
+	fprintf(stream, "Dataset:\n");
+	fprintf(stream, " - classes = %d ", dataset->n_classes);
+	fprintf(stream, "[%d bits]\n", dataset->n_bits_for_class);
+	fprintf(stream, " - attributes = %d \n", dataset->n_attributes);
+	fprintf(stream, " - observations = %d \n\n", dataset->n_observations);
+}
+
+void free_dataset(dataset_t *dataset) {
+	free(dataset->data);
+	free(dataset->n_observations_per_class);
+	free(dataset->observations_per_class);
+
+	dataset->data = NULL;
+	dataset->n_observations_per_class = NULL;
+	dataset->observations_per_class = NULL;
+}

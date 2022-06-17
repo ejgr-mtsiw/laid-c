@@ -15,6 +15,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 //
@@ -121,5 +122,15 @@ unsigned int remove_duplicates(dataset_t *dataset);
  * calculation of the disjoint matrix
  */
 void fill_class_arrays(dataset_t *dataset);
+
+/**
+ * Prints some attributes of the dataset to stream
+ */
+void print_dataset_details(FILE *stream, const dataset_t *dataset);
+
+/**
+ * Frees dataset memory
+ */
+void free_dataset(dataset_t *dataset);
 
 #endif

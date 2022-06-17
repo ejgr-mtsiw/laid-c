@@ -58,11 +58,7 @@ int main(int argc, char **argv) {
 			return EXIT_FAILURE;
 		}
 
-		fprintf(stdout, "Dataset %s\n", args.datasetname);
-		fprintf(stdout, " - classes = %d ", dataset.n_classes);
-		fprintf(stdout, "[%d bits]\n", dataset.n_bits_for_class);
-		fprintf(stdout, " - attributes = %d \n", dataset.n_attributes);
-		fprintf(stdout, " - observations = %d \n", dataset.n_observations);
+		print_dataset_details(stdout, &dataset);
 
 		// Sort dataset
 		// We need to know the number of longs in each line of the dataset so
@@ -141,9 +137,7 @@ int main(int argc, char **argv) {
 		/**
 		 * From this point forward we no longer need the dataset
 		 */
-		free(dataset.data);
-		free(dataset.n_observations_per_class);
-		free(dataset.observations_per_class);
+		free_dataset(&dataset);
 	}
 
 	calculate_solution(args.filename, DISJOINT_MATRIX_DATASET_NAME);
