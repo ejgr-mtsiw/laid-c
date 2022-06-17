@@ -12,7 +12,10 @@
  * Applies the set cover algorithm to the hdf5 dataset and prints
  * the minimum attribute set that covers all the lines
  */
-herr_t calculate_solution(const char *filename, const char *datasetname) {
+int calculate_solution(const char *filename, const char *datasetname,
+		cover_t *cover) {
+
+	int ret = OK;
 
 	// Open file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -20,7 +23,7 @@ herr_t calculate_solution(const char *filename, const char *datasetname) {
 		// Error creating file
 		fprintf(stderr, "Error opening file %s\n", filename);
 
-		return -1;
+		return NOK;
 	}
 
 	// Open dataset
@@ -31,10 +34,8 @@ herr_t calculate_solution(const char *filename, const char *datasetname) {
 		fprintf(stderr, "Dataset %s not found!\n",
 		DISJOINT_MATRIX_DATASET_NAME);
 
-		// Free resources
-		close_resources(file_id, 0, 0, 0);
-
-		return -1;
+		ret = NOK;
+		goto out_close_file;
 	}
 
 	hsize_t dm_dimensions[2];
@@ -58,10 +59,8 @@ herr_t calculate_solution(const char *filename, const char *datasetname) {
 		// Error creating file
 		fprintf(stderr, "Error creating dataset space\n");
 
-		// Free resources
-		close_resources(file_id, dataset_id, 0, 0);
-
-		return -1;
+		ret = NOK;
+		goto out_close_dataset;
 	}
 
 	// The choice of the chunk size affects performance!
@@ -71,10 +70,9 @@ herr_t calculate_solution(const char *filename, const char *datasetname) {
 	// Create a memory dataspace to indicate the size of our buffer/chunk
 	hid_t dm_memory_space_id = H5Screate_simple(2, dm_chunk_dimensions, NULL);
 
-	cover_t cover;
-	cover.n_longs = n_longs;
-	cover.matrix_n_lines = n_lines;
-	cover.n_attributes = n_attributes;
+	cover->n_longs = n_longs;
+	cover->matrix_n_lines = n_lines;
+	cover->n_attributes = n_attributes;
 
 	// Update column totals
 	/**
@@ -82,52 +80,43 @@ herr_t calculate_solution(const char *filename, const char *datasetname) {
 	 * Also works as solution. Every attribute that's part of the
 	 * solution is ignored in the next round of calculating totals
 	 */
-	cover.attribute_blacklist = calloc(n_attributes, sizeof(unsigned char));
-	if (cover.attribute_blacklist == NULL) {
+	cover->attribute_blacklist = calloc(n_attributes, sizeof(unsigned char));
+	if (cover->attribute_blacklist == NULL) {
 		fprintf(stderr, "Error allocating attribute blacklist array\n");
 
-		// Free resources
-		close_resources(file_id, dataset_id, dm_dataset_space_id,
-				dm_memory_space_id);
-
-		return -1;
+		ret = NOK;
+		goto out_close_memory_space;
 	}
 
 	/**
 	 * Allocate blacklisted lines array
 	 */
-	cover.line_blacklist = calloc(n_lines, sizeof(unsigned char));
-	if (cover.line_blacklist == NULL) {
+	cover->line_blacklist = calloc(n_lines, sizeof(unsigned char));
+	if (cover->line_blacklist == NULL) {
 		fprintf(stderr, "Error allocating line blacklist array\n");
 
-		// Free resources
-		close_resources(file_id, dataset_id, dm_dataset_space_id,
-				dm_memory_space_id);
-
-		return -1;
+		ret = NOK;
+		goto out_close_memory_space;
 	}
 
 	/**
 	 * Array to store the total number of '1's for each atribute
 	 */
-	cover.sum = calloc(n_attributes, sizeof(unsigned int));
-	if (cover.sum == NULL) {
+	cover->sum = calloc(n_attributes, sizeof(unsigned int));
+	if (cover->sum == NULL) {
 		fprintf(stderr, "Error allocating sum array\n");
 
-		// Free resources
-		close_resources(file_id, dataset_id, dm_dataset_space_id,
-				dm_memory_space_id);
-
-		return -1;
+		ret = NOK;
+		goto out_close_memory_space;
 	}
 
 	// Calculate initial sum for each attribute
 	calculate_initial_sum(dataset_id, dm_dataset_space_id, dm_memory_space_id,
-			&cover);
+			cover);
 
 	unsigned int max_total = 0;
 	unsigned int attribute_to_blacklist = 0;
-	unsigned int *sum = cover.sum;
+	unsigned int *sum = cover->sum;
 
 	do {
 
@@ -149,35 +138,31 @@ herr_t calculate_solution(const char *filename, const char *datasetname) {
 		}
 
 		// Blacklist attribute with max total
-		cover.attribute_blacklist[attribute_to_blacklist] = 1;
+		cover->attribute_blacklist[attribute_to_blacklist] = BLACKLISTED;
 		fprintf(stdout, "  - Blacklisted: %d\n", attribute_to_blacklist + 1);
 		fflush( stdout);
 
 		// Blacklist lines that have the blacklisted attribute set
 		blacklist_lines(dataset_id, dm_dataset_space_id, dm_memory_space_id,
-				&cover, attribute_to_blacklist);
+				cover, attribute_to_blacklist);
 
 	} while (max_total > 0);
 
-	free(cover.sum);
-	free(cover.line_blacklist);
+	out_close_memory_space: H5Sclose(dm_memory_space_id);
 
-	// Free resources
-	close_resources(file_id, dataset_id, dm_dataset_space_id,
-			dm_memory_space_id);
+	H5Sclose(dm_dataset_space_id);
 
-	fprintf(stdout, "Solution: { ");
-	for (unsigned int i = 0; i < n_attributes; i++) {
-		if (cover.attribute_blacklist[i]) {
-			// This attribute is set so it's part of the solution
-			printf("%d ", i + 1);
-		}
-	}
-	printf("}\n");
+	out_close_dataset: H5Dclose(dataset_id);
 
-	free(cover.attribute_blacklist);
+	out_close_file: H5Fclose(file_id);
 
-	return 0;
+	free(cover->sum);
+	free(cover->line_blacklist);
+
+	cover->sum = NULL;
+	cover->line_blacklist = NULL;
+
+	return ret;
 }
 
 herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
@@ -383,23 +368,23 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 //	}
 //}
 
-void close_resources(hid_t file_id, hid_t dataset_id, hid_t dm_dataset_space_id,
-		hid_t dm_memory_space_id) {
-
-	// Free resources
-	if (dm_memory_space_id != 0) {
-		H5Sclose(dm_memory_space_id);
+void print_solution(FILE *stream, cover_t *cover) {
+	fprintf(stream, "Solution: { ");
+	for (unsigned int i = 0; i < cover->n_attributes; i++) {
+		if (cover->attribute_blacklist[i] == BLACKLISTED) {
+			// This attribute is set so it's part of the solution
+			fprintf(stream, "%d ", i);
+		}
 	}
+	fprintf(stream, "}\n");
+}
 
-	if (dm_dataset_space_id != 0) {
-		H5Sclose(dm_dataset_space_id);
-	}
+void free_cover(cover_t *cover) {
+	free(cover->attribute_blacklist);
+	free(cover->line_blacklist);
+	free(cover->sum);
 
-	if (dataset_id != 0) {
-		H5Dclose(dataset_id);
-	}
-
-	if (file_id != 0) {
-		H5Fclose(file_id);
-	}
+	cover->attribute_blacklist = NULL;
+	cover->line_blacklist = NULL;
+	cover->sum = NULL;
 }

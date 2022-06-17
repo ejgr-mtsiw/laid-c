@@ -76,32 +76,10 @@ int main(int argc, char **argv) {
 		// Fill class arrays
 		fprintf(stdout, "Checking classes:\n");
 
-		/**
-		 * Array that stores the number of observations for each class
-		 */
-		dataset.n_observations_per_class = (unsigned int*) calloc(
-				dataset.n_classes, sizeof(unsigned int));
-		if (dataset.n_observations_per_class == NULL) {
-			fprintf(stderr, "Error allocating n_observations_per_class\n");
+		if (fill_class_arrays(&dataset) != OK) {
+			free_dataset(&dataset);
 			return EXIT_FAILURE;
 		}
-
-		/**
-		 * Matrix that stores the list of observations per class
-		 */
-		// WHATIF: should we replace the static matrix by pointers so each
-		// class has n items? Right now we waste at least half the matrix space
-		// WHATIF: If we reduce the number of possible columns and lines to
-		// 2^32-1 we could use half the memory by storing the line indexes
-		dataset.observations_per_class = (unsigned long**) calloc(
-				dataset.n_classes * dataset.n_observations,
-				sizeof(unsigned long*));
-		if (dataset.observations_per_class == NULL) {
-			fprintf(stderr, "Error allocating observations_per_class\n");
-			return EXIT_FAILURE;
-		}
-
-		fill_class_arrays(&dataset);
 
 		for (unsigned int i = 0; i < dataset.n_classes; i++) {
 			fprintf(stdout, " - class %d: %d item(s)\n", i,
@@ -125,14 +103,16 @@ int main(int argc, char **argv) {
 		fprintf(stdout, "Estimated disjoint matrix size: %lu, [%0.2fMB]\n",
 				matrix_lines, matrixsize);
 
-		fflush(stdout);
+		fprintf(stdout, "Started writing disjoint matrix.\n");
 
-		// Do LAD
+		fflush(stdout);
 
 		// Build disjoint matrix and store it in the hdf5 file
 		if (create_disjoint_matrix(args.filename, &dataset) != OK) {
 			return EXIT_FAILURE;
 		}
+
+		fprintf(stdout, "Finished writing disjoint matrix.\n");
 
 		/**
 		 * From this point forward we no longer need the dataset
@@ -140,7 +120,15 @@ int main(int argc, char **argv) {
 		free_dataset(&dataset);
 	}
 
-	calculate_solution(args.filename, DISJOINT_MATRIX_DATASET_NAME);
+	cover_t cover;
+	if (calculate_solution(args.filename, DISJOINT_MATRIX_DATASET_NAME,
+			&cover) != OK) {
+		return EXIT_FAILURE;
+	}
+
+	print_solution(stdout, &cover);
+
+	free_cover(&cover);
 
 	fprintf(stdout, "All done!\n");
 

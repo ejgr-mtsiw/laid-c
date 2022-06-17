@@ -113,10 +113,33 @@ unsigned int remove_duplicates(dataset_t *dataset) {
  * Fill the arrays with the number os items per class and also a matrix with
  * references to the lines that belong to each class to simplify the
  * calculation of the disjoint matrix
- *
- * Inputs are expected to be zeroed arrays
  */
-void fill_class_arrays(dataset_t *dataset) {
+int fill_class_arrays(dataset_t *dataset) {
+
+	/**
+	 * Array that stores the number of observations for each class
+	 */
+	dataset->n_observations_per_class = (unsigned int*) calloc(
+			dataset->n_classes, sizeof(unsigned int));
+	if (dataset->n_observations_per_class == NULL) {
+		fprintf(stderr, "Error allocating n_observations_per_class\n");
+		return NOK;
+	}
+
+	/**
+	 * Matrix that stores the list of observations per class
+	 */
+	// WHATIF: should we replace the static matrix by pointers so each
+	// class has n items? Right now we waste at least half the matrix space
+	// WHATIF: If we reduce the number of possible columns and lines to
+	// 2^32-1 we could use half the memory by storing the line indexes
+	dataset->observations_per_class = (unsigned long**) calloc(
+			dataset->n_classes * dataset->n_observations,
+			sizeof(unsigned long*));
+	if (dataset->observations_per_class == NULL) {
+		fprintf(stderr, "Error allocating observations_per_class\n");
+		return NOK;
+	}
 
 	// Current line
 	unsigned long *line = dataset->data;
@@ -152,6 +175,8 @@ void fill_class_arrays(dataset_t *dataset) {
 
 		NEXT_LINE(line, n_longs);
 	}
+
+	return OK;
 }
 
 void print_dataset_details(FILE *stream, const dataset_t *dataset) {

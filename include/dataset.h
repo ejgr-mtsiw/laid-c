@@ -121,7 +121,7 @@ unsigned int remove_duplicates(dataset_t *dataset);
  * references to the lines that belong to each class to simplify the
  * calculation of the disjoint matrix
  */
-void fill_class_arrays(dataset_t *dataset);
+int fill_class_arrays(dataset_t *dataset);
 
 /**
  * Prints some attributes of the dataset to stream
