@@ -1,19 +1,19 @@
 /*
  ============================================================================
- Name        : dataset_hdf5.h
+ Name        : hdf5_dataset.h
  Author      : Eduardo Ribeiro
  Description : Structures and functions to manage hdf5 datasets
  ============================================================================
  */
 
-#ifndef DATASET_HDF5_H
-#define DATASET_HDF5_H
+#ifndef HDF5_DATASET_H
+#define HDF5_DATASET_H
 
 #include "dataset.h"
 #include "globals.h"
 #include "hdf5.h"
-#include <math.h>
 #include <malloc.h>
+#include <math.h>
 #include <stdint.h>
 
 /**
@@ -37,7 +37,12 @@
 #define HDF5_N_OBSERVATIONS_ATTRIBUTE "n_observations"
 
 /**
- * Checks if dataset is present in file_id
+ * Attrinute for the number of lines of the disjoint matrix
+ */
+#define HDF5_N_MATRIX_LINES_ATTRIBUTE "n_matrix_lines"
+
+/**
+ * Checks if dataset eis present in file_id
  */
 bool hdf5_dataset_exists(const hid_t file_id, const char *dataset);
 
@@ -56,18 +61,18 @@ herr_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
 /**
  * Writes an attribute to the dataset
  */
-herr_t write_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
-		const void *value);
+herr_t hdf5_write_attribute(hid_t dataset_id, const char *attribute,
+		hid_t datatype, const void *value);
 
 /**
  * Reads chunk dimensions from dataset if chunking was enabled
  */
-int get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions);
+int hdf5_get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions);
 
 ///**
 // * Returns the dataset dimensions stored in the hdf5 dataset
 // */
-//void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions);
+//void hdf5_get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions);
 //
 ///**
 // * Calculates the dataset dimensions based on the number

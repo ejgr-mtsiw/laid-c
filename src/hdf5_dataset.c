@@ -135,43 +135,43 @@ herr_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
 	return status;
 }
 
-///**
-// * Writes an attribute to the dataset
-// */
-//herr_t write_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
-//		const void *value) {
-//
-//	hid_t attr_dataspace = H5Screate(H5S_SCALAR);
-//	hid_t attr = H5Acreate2(dataset_id, attribute, datatype, attr_dataspace,
-//	H5P_DEFAULT, H5P_DEFAULT);
-//
-//	// Write the attribute to the dataset
-//	herr_t status = H5Awrite(attr, datatype, value);
-//	if (status < 0) {
-//		fprintf(stderr, "Error writing attribute %s.\n", attribute);
-//		return status;
-//	}
-//
-//	// Close the attribute.
-//	status = H5Aclose(attr);
-//	if (status < 0) {
-//		fprintf(stderr, "Error closing attribute %s.\n", attribute);
-//		return status;
-//	}
-//
-//	// Close the dataspace.
-//	status = H5Sclose(attr_dataspace);
-//	if (status < 0) {
-//		fprintf(stderr, "Error closing attribute %s datatspace.\n", attribute);
-//	}
-//
-//	return status;
-//}
+/**
+ * Writes an attribute to the dataset
+ */
+herr_t hdf5_write_attribute(hid_t dataset_id, const char *attribute,
+		hid_t datatype, const void *value) {
+
+	hid_t attr_dataspace = H5Screate(H5S_SCALAR);
+	hid_t attr = H5Acreate2(dataset_id, attribute, datatype, attr_dataspace,
+	H5P_DEFAULT, H5P_DEFAULT);
+
+	// Write the attribute to the dataset
+	herr_t status = H5Awrite(attr, datatype, value);
+	if (status < 0) {
+		fprintf(stderr, "Error writing attribute %s.\n", attribute);
+		return status;
+	}
+
+	// Close the attribute.
+	status = H5Aclose(attr);
+	if (status < 0) {
+		fprintf(stderr, "Error closing attribute %s.\n", attribute);
+		return status;
+	}
+
+	// Close the dataspace.
+	status = H5Sclose(attr_dataspace);
+	if (status < 0) {
+		fprintf(stderr, "Error closing attribute %s datatspace.\n", attribute);
+	}
+
+	return status;
+}
 
 /**
  * Reads chunk dimensions from dataset if chunking was enabled
  */
-int get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions) {
+int hdf5_get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions) {
 
 	// No chunking defined
 	int chunked = 0;
@@ -191,18 +191,3 @@ int get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions) {
 	return chunked;
 }
 
-///**
-// * Returns the dataset dimensions stored in the hdf5 dataset
-// */
-//void get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions) {
-//
-//	// Get filespace handle first.
-//	hid_t dataset_space_id = H5Dget_space(dataset_id);
-//
-//	// Get dataset dimensions.
-//	H5Sget_simple_extent_dims(dataset_space_id, dataset_dimensions, NULL);
-//
-//	// Close dataspace
-//	H5Sclose(dataset_space_id);
-//}
-//
