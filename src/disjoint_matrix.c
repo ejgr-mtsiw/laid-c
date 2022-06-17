@@ -99,8 +99,8 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 
 	// Create the dataset
 	hid_t dm_dataset_id = H5Dcreate2(file_id, DISJOINT_MATRIX_DATASET_NAME,
-	H5T_NATIVE_ULONG, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
-	H5P_DEFAULT);
+			H5T_STD_U64BE, dm_dataset_space_id, H5P_DEFAULT,
+			dm_property_list_id, H5P_DEFAULT);
 	if (dm_dataset_id < 0) {
 		fprintf(stderr, "Error creating disjoint matrix dataset\n");
 		return NOK;
