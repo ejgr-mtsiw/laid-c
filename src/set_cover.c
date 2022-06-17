@@ -280,6 +280,8 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	fflush( stdout);
 #endif
 
+	free(buffer);
+
 	return 0;
 }
 
