@@ -8,6 +8,11 @@
 
 #include "dataset_hdf5.h"
 
+bool hdf5_dataset_exists(const hid_t file_id, const char *name) {
+
+	return (H5Lexists(file_id, name, H5P_DEFAULT) > 0);
+}
+
 /**
  * Reads the dataset attributes from the hdf5 file
  */

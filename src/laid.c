@@ -180,8 +180,7 @@ int main(int argc, char **argv) {
 	// Do LAD
 
 	// Build disjoint matrix and store it in the hdf5 file
-	if (create_disjoint_matrix(args.filename, DISJOINT_MATRIX_DATASET_NAME,
-			&dataset) != 0) {
+	if (create_disjoint_matrix(args.filename, &dataset) != OK) {
 		return EXIT_FAILURE;
 	}
 

@@ -37,6 +37,11 @@
 #define HDF5_N_OBSERVATIONS_ATTRIBUTE "n_observations"
 
 /**
+ * Checks if dataset is present in file_id
+ */
+bool hdf5_dataset_exists(const hid_t file_id, const char *dataset);
+
+/**
  * Reads the dataset attributes from the hdf5 file
  */
 herr_t read_attributes(const hid_t dataset_id, dataset_t *dataset);

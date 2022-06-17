@@ -34,8 +34,9 @@ unsigned long calculate_number_of_lines_of_disjoint_matrix(
  * If the dataset already exists it assumes it's filled from a previous run
  * and will do nothing
  */
-herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
-		const dataset_t *dataset) {
+herr_t create_disjoint_matrix(const char *filename, const dataset_t *dataset) {
+
+	herr_t ret = OK;
 
 	// Open file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -43,31 +44,25 @@ herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
 		// Error creating file
 		fprintf(stderr, "Error opening file %s\n", filename);
 
-		return -1;
+		return NOK;
 	}
 
-	// Open dataset
+	// Check if dataset already exists
 	// If it exists assume it's filled
-	// WHATIF: should we NOT assume it's filled and recalculate?
-
-	hid_t dm_dataset_id = H5Dopen2(file_id, datasetname, H5P_DEFAULT);
-	if (dm_dataset_id < 0) {
+	if (!hdf5_dataset_exists(file_id, DISJOINT_MATRIX_DATASET_NAME)) {
 		// Dataset does not exist
 		fprintf(stdout, "Matrix dataset not found. Creating new\n");
 
 		if (create_disjoint_matrix_dataset(file_id, dataset) != 0) {
 
 			fprintf(stderr, "Error creating new disjoint matrix dataset\n");
-
-			H5Fclose(file_id);
-
-			return -1;
+			ret = NOK;
 		}
 	}
 
 	H5Fclose(file_id);
 
-	return 0;
+	return ret;
 }
 
 /**
