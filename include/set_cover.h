@@ -10,6 +10,7 @@
 #define SET_COVER_H
 
 #include "bit_utils.h"
+#include "dataset.h"
 #include "disjoint_matrix.h"
 #include "globals.h"
 #include "hdf5.h"
@@ -17,10 +18,16 @@
 #include <string.h>
 
 typedef struct cover_t {
+
 	/**
-	 * The base dataset
+	 * Number of attributes
 	 */
-	dataset_t *dataset;
+	unsigned int n_attributes;
+
+	/**
+	 * Number of longs (64bits) needed to store a line
+	 */
+	unsigned int n_longs;
 
 	/**
 	 * Number of lines of the disjoint matrix
@@ -48,8 +55,7 @@ typedef struct cover_t {
  * Applies the set cover algorithm to the hdf5 dataset and prints
  * the minimum attribute set that covers all the lines
  */
-herr_t calculate_solution(const char *filename, const char *datasetname,
-		cover_t *cover);
+herr_t calculate_solution(const char *filename, const char *datasetname);
 
 /**
  * Reads the disjoint matrix dataset and blacklists the lines that

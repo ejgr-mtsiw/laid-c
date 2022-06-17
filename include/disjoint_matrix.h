@@ -14,6 +14,7 @@
 #include "hdf5.h"
 #include "hdf5_dataset.h"
 #include <malloc.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 /**
@@ -28,6 +29,11 @@ unsigned long calculate_number_of_lines_of_disjoint_matrix(
 		const dataset_t *dataset);
 
 /**
+ * Checks if the disjoint matrix dataset is already present in the hdf5 file
+ */
+bool is_matrix_created(const char *filename);
+
+/**
  * Builds the disjoint matrix and saves it to the hdf5 dataset file
  */
 herr_t create_disjoint_matrix(const char *filename, const dataset_t *dataset);
@@ -36,6 +42,12 @@ herr_t create_disjoint_matrix(const char *filename, const dataset_t *dataset);
  * Creates a new disjoint matrix dataset
  */
 herr_t create_disjoint_matrix_dataset(const hid_t file_id,
+		const dataset_t *dataset);
+
+/**
+ * Creates the matrix atributes in the dataset
+ */
+herr_t create_disjoint_matrix_attributes(const hid_t dataset_id,
 		const dataset_t *dataset);
 
 #endif

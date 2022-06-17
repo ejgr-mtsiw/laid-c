@@ -12,8 +12,7 @@
  * Applies the set cover algorithm to the hdf5 dataset and prints
  * the minimum attribute set that covers all the lines
  */
-herr_t calculate_solution(const char *filename, const char *datasetname,
-		cover_t *cover) {
+herr_t calculate_solution(const char *filename, const char *datasetname) {
 
 	// Open file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -25,10 +24,12 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 	}
 
 	// Open dataset
-	hid_t dataset_id = H5Dopen2(file_id, datasetname, H5P_DEFAULT);
+	hid_t dataset_id = H5Dopen2(file_id, datasetname,
+	H5P_DEFAULT);
 	if (dataset_id < 1) {
 		// Error creating file
-		fprintf(stderr, "Dataset %s not found!\n", datasetname);
+		fprintf(stderr, "Dataset %s not found!\n",
+		DISJOINT_MATRIX_DATASET_NAME);
 
 		// Free resources
 		close_resources(file_id, 0, 0, 0);
@@ -36,31 +37,22 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 		return -1;
 	}
 
+	hsize_t dm_dimensions[2];
+	hdf5_get_dataset_dimensions(dataset_id, dm_dimensions);
+
+	// Get number of lines of disjoint matrix
+	unsigned long n_lines = dm_dimensions[0];
+
 	// Number of longs in a line
-	unsigned int n_longs = cover->dataset->n_longs;
+	unsigned int n_longs = dm_dimensions[1];
 
 	// Number of attributes
-	unsigned int n_attributes = cover->dataset->n_attributes;
-
-	// Number of observations
-//	unsigned int n_observations = cover->dataset->n_observations;
-
-// Number of classes
-//	unsigned int n_classes = cover->dataset->n_classes;
-
-// Observations per class
-//	unsigned long **observations_per_class =
-//			cover->dataset->observations_per_class;
-
-// Number of observations per class
-//	unsigned int *n_observations_per_class =
-//			cover->dataset->n_observations_per_class;
-
-// Calculate number of lines of disjoint matrix
-	unsigned long n_lines = cover->matrix_n_lines;
+	unsigned int n_attributes = 0;
+	hdf5_read_attribute(dataset_id, HDF5_N_ATTRIBUTES_ATTRIBUTE,
+	H5T_NATIVE_UINT, &n_attributes);
 
 	// Setup memory space
-	hsize_t dm_dimensions[2] = { n_lines, n_longs };
+	//hsize_t dm_dimensions[2] = { n_lines, n_longs };
 	hid_t dm_dataset_space_id = H5Screate_simple(2, dm_dimensions, NULL);
 	if (dm_dataset_space_id < 0) {
 		// Error creating file
@@ -79,14 +71,19 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 	// Create a memory dataspace to indicate the size of our buffer/chunk
 	hid_t dm_memory_space_id = H5Screate_simple(2, dm_chunk_dimensions, NULL);
 
+	cover_t cover;
+	cover.n_longs = n_longs;
+	cover.matrix_n_lines = n_lines;
+	cover.n_attributes = n_attributes;
+
 	// Update column totals
 	/**
 	 * Array to store the blacklisted attributes
 	 * Also works as solution. Every attribute that's part of the
 	 * solution is ignored in the next round of calculating totals
 	 */
-	cover->attribute_blacklist = calloc(n_attributes, sizeof(unsigned char));
-	if (cover->attribute_blacklist == NULL) {
+	cover.attribute_blacklist = calloc(n_attributes, sizeof(unsigned char));
+	if (cover.attribute_blacklist == NULL) {
 		fprintf(stderr, "Error allocating attribute blacklist array\n");
 
 		// Free resources
@@ -99,8 +96,8 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 	/**
 	 * Allocate blacklisted lines array
 	 */
-	cover->line_blacklist = calloc(n_lines, sizeof(unsigned char));
-	if (cover->line_blacklist == NULL) {
+	cover.line_blacklist = calloc(n_lines, sizeof(unsigned char));
+	if (cover.line_blacklist == NULL) {
 		fprintf(stderr, "Error allocating line blacklist array\n");
 
 		// Free resources
@@ -113,8 +110,8 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 	/**
 	 * Array to store the total number of '1's for each atribute
 	 */
-	cover->sum = calloc(n_attributes, sizeof(unsigned int));
-	if (cover->sum == NULL) {
+	cover.sum = calloc(n_attributes, sizeof(unsigned int));
+	if (cover.sum == NULL) {
 		fprintf(stderr, "Error allocating sum array\n");
 
 		// Free resources
@@ -124,14 +121,13 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 		return -1;
 	}
 
-	unsigned int *sum = cover->sum;
-
 	// Calculate initial sum for each attribute
 	calculate_initial_sum(dataset_id, dm_dataset_space_id, dm_memory_space_id,
-			cover);
+			&cover);
 
 	unsigned int max_total = 0;
 	unsigned int attribute_to_blacklist = 0;
+	unsigned int *sum = cover.sum;
 
 	do {
 
@@ -153,18 +149,18 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 		}
 
 		// Blacklist attribute with max total
-		cover->attribute_blacklist[attribute_to_blacklist] = 1;
+		cover.attribute_blacklist[attribute_to_blacklist] = 1;
 		fprintf(stdout, "  - Blacklisted: %d\n", attribute_to_blacklist + 1);
 		fflush( stdout);
 
 		// Blacklist lines that have the blacklisted attribute set
 		blacklist_lines(dataset_id, dm_dataset_space_id, dm_memory_space_id,
-				cover, attribute_to_blacklist);
+				&cover, attribute_to_blacklist);
 
 	} while (max_total > 0);
 
-	free(cover->sum);
-	free(cover->line_blacklist);
+	free(cover.sum);
+	free(cover.line_blacklist);
 
 	// Free resources
 	close_resources(file_id, dataset_id, dm_dataset_space_id,
@@ -172,14 +168,14 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 
 	fprintf(stdout, "Solution: { ");
 	for (unsigned int i = 0; i < n_attributes; i++) {
-		if (cover->attribute_blacklist[i]) {
+		if (cover.attribute_blacklist[i]) {
 			// This attribute is set so it's part of the solution
 			printf("%d ", i + 1);
 		}
 	}
 	printf("}\n");
 
-	free(cover->attribute_blacklist);
+	free(cover.attribute_blacklist);
 
 	return 0;
 }
@@ -201,10 +197,10 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	unsigned char bit = BLOCK_BITS - 1 - attribute_to_blacklist % BLOCK_BITS;
 
 	// Number of longs in a line
-	unsigned int n_longs = cover->dataset->n_longs;
+	unsigned int n_longs = cover->n_longs;
 
 	// Number of attributes
-	unsigned int n_attributes = cover->dataset->n_attributes;
+	unsigned int n_attributes = cover->n_attributes;
 
 	// Calculate number of lines of disjoint matrix
 	unsigned long n_lines = cover->matrix_n_lines;
@@ -300,11 +296,11 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 	fflush( stdout);
 #endif
 
-	unsigned int n_longs = cover->dataset->n_longs;
+	unsigned int n_longs = cover->n_longs;
 
 	unsigned long n_lines = cover->matrix_n_lines;
 
-	unsigned int n_attributes = cover->dataset->n_attributes;
+	unsigned int n_attributes = cover->n_attributes;
 
 	unsigned int *sum = cover->sum;
 
