@@ -28,17 +28,6 @@
 #define DATASET_NOT_ENOUGH_OBSERVATIONS 8
 #define DATASET_ERROR_ALLOCATING_DATA 16
 
-// Used in debugging
-#ifdef DEBUG
-//#define DEBUG_PRINT_DATASET(stream, title,dataset, extra) print_dataset(stream, title, dataset, extra);
-#define DEBUG_PRINT_DATASET(stream, title,dataset, extra)
-#else
-#define DEBUG_PRINT_DATASET(stream, title,dataset, extra)
-#endif
-
-#define PRINT_WITHOUT_EXTRA_BITS false
-#define PRINT_WITH_EXTRA_BITS true
-
 /**
  *
  */
@@ -132,16 +121,5 @@ unsigned int remove_duplicates(dataset_t *dataset);
  * calculation of the disjoint matrix
  */
 void fill_class_arrays(dataset_t *dataset);
-
-/**
- * Prints a line to stream
- */
-void print_line(FILE *stream, const unsigned long *line, const bool extra_bits);
-
-/**
- * Prints the whole dataset
- */
-void print_dataset(FILE *stream, const char *title, dataset_t *dataset,
-		const bool extra_bits);
 
 #endif

@@ -22,7 +22,14 @@
 #include <stdlib.h>
 
 /**
- *
+ * Reads dataset attributes from hdf5 file
+ * Read dataset
+ * Sort dataset
+ * Remove duplicates
+ * Add jnsqs
+ * Write disjoint matrix
+ * Apply set covering algorithm
+ * Show solution
  */
 int main(int argc, char **argv) {
 
@@ -42,9 +49,8 @@ int main(int argc, char **argv) {
 	dataset_t dataset;
 
 	/**
-	 * READ AND SETUP DATASET
+	 * READ DATASET
 	 */
-
 	// Fill dataset attributes
 	if (hdf5_read_dataset_attributes(args.filename, args.datasetname,
 			&dataset) != DATASET_OK) {
@@ -103,28 +109,18 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	DEBUG_PRINT_DATASET(stdout, "Initial data", dataset.data,
-			PRINT_WITH_EXTRA_BITS)
-
 	// Sort dataset
+	// We need to know the number of longs in each line of the dataset so
+	// we can't use the standard qsort implementation
 	sort_r(dataset.data, dataset.n_observations,
 			dataset.n_longs * sizeof(unsigned long), compare_lines_extra,
 			&dataset.n_longs);
-
-//	qsort(dataset.data, dataset.n_observations,
-//			dataset.n_longs * sizeof(unsigned long), compare_lines);
-
-	DEBUG_PRINT_DATASET(stdout, "Sorted data", dataset.data,
-			PRINT_WITH_EXTRA_BITS)
 
 	// remove duplicates
 	fprintf(stdout, "Removing duplicates:\n");
 	unsigned int duplicates = remove_duplicates(&dataset);
 
 	fprintf(stdout, " - %d duplicate(s) removed\n", duplicates);
-
-	DEBUG_PRINT_DATASET(stdout, "Unique observations", dataset.data,
-			PRINT_WITH_EXTRA_BITS)
 
 	// Fill class arrays
 	fprintf(stdout, "Checking classes:\n");
