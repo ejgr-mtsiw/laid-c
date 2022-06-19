@@ -181,10 +181,6 @@ int create_disjoint_matrix_dataset(const hid_t file_id,
 		}
 	}
 
-#ifdef DEBUG
-	fprintf(stdout, "Writing disjoint matrix: 100.0%%\n");
-#endif
-
 	free(buffer);
 
 	out_memory_space: H5Sclose(dm_memory_space_id);
