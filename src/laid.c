@@ -67,10 +67,9 @@ int main(int argc, char **argv) {
 				dataset.n_longs * sizeof(unsigned long), compare_lines_extra,
 				&dataset.n_longs);
 
-		// remove duplicates
+		// Remove duplicates
 		fprintf(stdout, "Removing duplicates:\n");
 		unsigned int duplicates = remove_duplicates(&dataset);
-
 		fprintf(stdout, " - %d duplicate(s) removed\n", duplicates);
 
 		// Fill class arrays
@@ -88,7 +87,6 @@ int main(int argc, char **argv) {
 
 		// Set JNSQ
 		fprintf(stdout, "Setting up JNSQ attributes:\n");
-
 		unsigned int max_jnsq = add_jnsqs(&dataset);
 		fprintf(stdout, " - Max JNSQ: %d [%d bits]\n", max_jnsq,
 				dataset.n_bits_for_jnsqs);
@@ -121,6 +119,8 @@ int main(int argc, char **argv) {
 	}
 
 	cover_t cover;
+
+	fprintf(stdout, "Started applying set covering algorithm.\n");
 	if (calculate_solution(args.filename, DISJOINT_MATRIX_DATASET_NAME,
 			&cover) != OK) {
 		return EXIT_FAILURE;

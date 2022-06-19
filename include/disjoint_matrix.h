@@ -36,12 +36,12 @@ bool is_matrix_created(const char *filename);
 /**
  * Builds the disjoint matrix and saves it to the hdf5 dataset file
  */
-herr_t create_disjoint_matrix(const char *filename, const dataset_t *dataset);
+int create_disjoint_matrix(const char *filename, const dataset_t *dataset);
 
 /**
  * Creates a new disjoint matrix dataset
  */
-herr_t create_disjoint_matrix_dataset(const hid_t file_id,
+int create_disjoint_matrix_dataset(const hid_t file_id,
 		const dataset_t *dataset);
 
 /**

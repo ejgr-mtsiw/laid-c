@@ -32,9 +32,9 @@ bool is_matrix_created(const char *filename) {
 	return hdf5_dataset_exists_in_file(filename, DISJOINT_MATRIX_DATASET_NAME);
 }
 
-herr_t create_disjoint_matrix(const char *filename, const dataset_t *dataset) {
+int create_disjoint_matrix(const char *filename, const dataset_t *dataset) {
 
-	herr_t ret = OK;
+	int ret = OK;
 
 	// Open file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -56,7 +56,7 @@ herr_t create_disjoint_matrix(const char *filename, const dataset_t *dataset) {
 	return ret;
 }
 
-herr_t create_disjoint_matrix_dataset(const hid_t file_id,
+int create_disjoint_matrix_dataset(const hid_t file_id,
 		const dataset_t *dataset) {
 
 	// Number of longs in a line
@@ -76,6 +76,8 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 
 	unsigned long n_lines = calculate_number_of_lines_of_disjoint_matrix(
 			dataset);
+
+	int ret = OK;
 
 	// Dataset dimensions
 	hsize_t dm_dimensions[2] = { n_lines, n_longs };
@@ -99,18 +101,20 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 
 	// Create the dataset
 	hid_t dm_dataset_id = H5Dcreate2(file_id, DISJOINT_MATRIX_DATASET_NAME,
-			H5T_STD_U64BE, dm_dataset_space_id, H5P_DEFAULT,
-			dm_property_list_id, H5P_DEFAULT);
+	H5T_STD_U64BE, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
+	H5P_DEFAULT);
 	if (dm_dataset_id < 0) {
 		fprintf(stderr, "Error creating disjoint matrix dataset\n");
-		return NOK;
+		ret = NOK;
+		goto out_dataset_space;
 	}
 
 	// Save attributes
 	if (create_disjoint_matrix_attributes(dm_dataset_id, dataset) < 0) {
 
 		fprintf(stderr, "Error saving matrix atributes");
-		return NOK;
+		ret = NOK;
+		goto out_dataset;
 	}
 
 	// Close resources
@@ -119,6 +123,11 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 	// Create a memory dataspace to indicate the size of our buffer/chunk
 	hid_t dm_memory_space_id = H5Screate_simple(2, dm_chunk_dimensions,
 	NULL);
+	if (dm_memory_space_id < 0) {
+		fprintf(stderr, "Error creating disjoint matrix memory space\n");
+		ret = NOK;
+		goto out_memory_space;
+	}
 
 	// Alocate buffer
 	unsigned long *buffer = (unsigned long*) malloc(
@@ -160,12 +169,13 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 
 	free(buffer);
 
-	H5Sclose(dm_memory_space_id);
-	H5Sclose(dm_dataset_space_id);
+	out_memory_space: H5Sclose(dm_memory_space_id);
 
-	H5Dclose(dm_dataset_id);
+	out_dataset_space: H5Sclose(dm_dataset_space_id);
 
-	return OK;
+	out_dataset: H5Dclose(dm_dataset_id);
+
+	return ret;
 }
 
 herr_t create_disjoint_matrix_attributes(const hid_t dataset_id,
