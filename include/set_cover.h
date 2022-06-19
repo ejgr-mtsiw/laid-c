@@ -11,9 +11,9 @@
 
 #include "bit_utils.h"
 #include "dataset.h"
-#include "disjoint_matrix.h"
 #include "globals.h"
 #include "hdf5.h"
+#include "hdf5_dataset.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

@@ -27,12 +27,10 @@ int calculate_solution(const char *filename, const char *datasetname,
 	}
 
 	// Open dataset
-	hid_t dataset_id = H5Dopen2(file_id, datasetname,
-	H5P_DEFAULT);
+	hid_t dataset_id = H5Dopen2(file_id, datasetname, H5P_DEFAULT);
 	if (dataset_id < 1) {
 		// Error creating file
-		fprintf(stderr, "Dataset %s not found!\n",
-		DISJOINT_MATRIX_DATASET_NAME);
+		fprintf(stderr, "Dataset %s not found!\n", datasetname);
 
 		ret = NOK;
 		goto out_close_file;
@@ -245,6 +243,11 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 
 				// Update sum removing the contribution from this line
 				for (unsigned int l = 0; l < n_longs; l++) {
+
+					if (buffer[l] == 0UL) {
+						continue;
+					}
+
 					c_long = buffer[l];
 					c_attribute = l * BLOCK_BITS;
 
