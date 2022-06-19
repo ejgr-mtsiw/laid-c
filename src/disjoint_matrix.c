@@ -137,6 +137,10 @@ int create_disjoint_matrix_dataset(const hid_t file_id,
 	hsize_t count[2] = { 1, dm_chunk_dimensions[1] };
 	hsize_t offset[2] = { 0, 0 };
 
+#ifdef DEBUG
+	unsigned int next_output = 0;
+#endif
+
 	// Current line
 	for (unsigned int i = 0; i < n_classes - 1; i++) {
 		for (unsigned int j = i + 1; j < n_classes; j++) {
@@ -162,10 +166,24 @@ int create_disjoint_matrix_dataset(const hid_t file_id,
 
 					// Update offset
 					offset[0]++;
+
+#ifdef DEBUG
+					if (offset[0] > next_output) {
+						fprintf(stdout, "Writing disjoint matrix: %0.0f%%.\r",
+								((double) offset[0]) / n_lines * 100);
+						fflush( stdout);
+
+						next_output += n_lines / 10;
+					}
+#endif
 				}
 			}
 		}
 	}
+
+#ifdef DEBUG
+	fprintf(stdout, "Writing disjoint matrix: 100.0%%\n");
+#endif
 
 	free(buffer);
 

@@ -184,7 +184,7 @@ void print_dataset_details(FILE *stream, const dataset_t *dataset) {
 	fprintf(stream, " - classes = %d ", dataset->n_classes);
 	fprintf(stream, "[%d bits]\n", dataset->n_bits_for_class);
 	fprintf(stream, " - attributes = %d \n", dataset->n_attributes);
-	fprintf(stream, " - observations = %d \n\n", dataset->n_observations);
+	fprintf(stream, " - observations = %d \n", dataset->n_observations);
 }
 
 void free_dataset(dataset_t *dataset) {

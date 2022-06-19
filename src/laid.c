@@ -30,6 +30,12 @@
  */
 int main(int argc, char **argv) {
 
+	SETUP_TIMING
+
+	struct timespec main_tick,
+	main_tock;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &main_tick);
+
 	/**
 	 * Command line arguments set by the user
 	 */
@@ -49,6 +55,8 @@ int main(int argc, char **argv) {
 		 */
 		dataset_t dataset;
 
+		TICK
+
 		/**
 		 * READ DATASET
 		 */
@@ -60,6 +68,11 @@ int main(int argc, char **argv) {
 
 		print_dataset_details(stdout, &dataset);
 
+		fprintf(stdout, "Finished loading dataset ");
+		TOCK(stdout);
+
+		TICK
+
 		// Sort dataset
 		// We need to know the number of longs in each line of the dataset so
 		// we can't use the standard qsort implementation
@@ -67,13 +80,20 @@ int main(int argc, char **argv) {
 				dataset.n_longs * sizeof(unsigned long), compare_lines_extra,
 				&dataset.n_longs);
 
+		fprintf(stdout, "\nSorted dataset ");
+		TOCK(stdout);
+
+		TICK
 		// Remove duplicates
-		fprintf(stdout, "Removing duplicates:\n");
+		fprintf(stdout, "\nRemoving duplicates:\n");
 		unsigned int duplicates = remove_duplicates(&dataset);
-		fprintf(stdout, " - %d duplicate(s) removed\n", duplicates);
+		fprintf(stdout, " - %d duplicate(s) removed ", duplicates);
+		TOCK(stdout);
+
+		TICK
 
 		// Fill class arrays
-		fprintf(stdout, "Checking classes:\n");
+		fprintf(stdout, "\nChecking classes:\n");
 
 		if (fill_class_arrays(&dataset) != OK) {
 			free_dataset(&dataset);
@@ -85,11 +105,18 @@ int main(int argc, char **argv) {
 					dataset.n_observations_per_class[i]);
 		}
 
+		TOCK(stdout);
+
+		TICK
+
 		// Set JNSQ
-		fprintf(stdout, "Setting up JNSQ attributes:\n");
+		fprintf(stdout, "\nSetting up JNSQ attributes:\n");
 		unsigned int max_jnsq = add_jnsqs(&dataset);
-		fprintf(stdout, " - Max JNSQ: %d [%d bits]\n", max_jnsq,
+		fprintf(stdout, " - Max JNSQ: %d [%d bits] ", max_jnsq,
 				dataset.n_bits_for_jnsqs);
+		TOCK(stdout);
+
+		TICK
 
 		unsigned long matrix_lines =
 				calculate_number_of_lines_of_disjoint_matrix(&dataset);
@@ -98,19 +125,17 @@ int main(int argc, char **argv) {
 				* (dataset.n_attributes + dataset.n_bits_for_class))
 				/ (1024 * 1024 * 8);
 
-		fprintf(stdout, "Estimated disjoint matrix size: %lu, [%0.2fMB]\n",
+		fprintf(stdout, "\nBuilding disjoint matrix.\n");
+		fprintf(stdout, "Estimated disjoint matrix size: %lu lines [%0.2fMB]\n",
 				matrix_lines, matrixsize);
-
-		fprintf(stdout, "Started writing disjoint matrix.\n");
-
-		fflush(stdout);
 
 		// Build disjoint matrix and store it in the hdf5 file
 		if (create_disjoint_matrix(args.filename, &dataset) != OK) {
 			return EXIT_FAILURE;
 		}
 
-		fprintf(stdout, "Finished writing disjoint matrix.\n");
+		fprintf(stdout, "Finished building disjoint matrix ");
+		TOCK(stdout);
 
 		/**
 		 * From this point forward we no longer need the dataset
@@ -120,7 +145,8 @@ int main(int argc, char **argv) {
 
 	cover_t cover;
 
-	fprintf(stdout, "Started applying set covering algorithm.\n");
+	TICK
+	fprintf(stdout, "\nApplying set covering algorithm.\n");
 	if (calculate_solution(args.filename, DISJOINT_MATRIX_DATASET_NAME,
 			&cover) != OK) {
 		return EXIT_FAILURE;
@@ -130,7 +156,12 @@ int main(int argc, char **argv) {
 
 	free_cover(&cover);
 
-	fprintf(stdout, "All done!\n");
+	fprintf(stdout, "All done! ");
+
+	clock_gettime(CLOCK_MONOTONIC_RAW, &main_tock);
+	fprintf(stdout, "[%0.3fs]\n",
+			(main_tock.tv_nsec - main_tick.tv_nsec) / 1000000000.0
+					+ (main_tock.tv_sec - main_tick.tv_sec));
 
 	return EXIT_SUCCESS;
 }

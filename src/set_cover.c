@@ -118,6 +118,8 @@ int calculate_solution(const char *filename, const char *datasetname,
 	unsigned int attribute_to_blacklist = 0;
 	unsigned int *sum = cover->sum;
 
+	unsigned int round = 1;
+
 	do {
 
 		// Select attribute to blacklist / add to solution
@@ -137,10 +139,11 @@ int calculate_solution(const char *filename, const char *datasetname,
 			break;
 		}
 
+		fprintf(stdout, "\n - Selecting attribute round #%d\n", round++);
+
 		// Blacklist attribute with max total
 		cover->attribute_blacklist[attribute_to_blacklist] = BLACKLISTED;
-		fprintf(stdout, "  - Blacklisted: %d\n", attribute_to_blacklist);
-		fflush( stdout);
+		fprintf(stdout, "  - Selected attribute #%d\n", attribute_to_blacklist);
 
 		// Blacklist lines that have the blacklisted attribute set
 		blacklist_lines(dataset_id, dm_dataset_space_id, dm_memory_space_id,
@@ -169,11 +172,8 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 		const hid_t memory_space_id, const cover_t *cover,
 		const unsigned int attribute_to_blacklist) {
 
-#ifdef DEBUG
-	unsigned int next_output = 0;
-	fprintf(stdout, "[set_cover::blacklist_lines] Starting.\n");
-	fflush( stdout);
-#endif
+	SETUP_TIMING
+	TICK
 
 	// Attribute to blacklist is in long n
 	unsigned int n = attribute_to_blacklist / BLOCK_BITS;
@@ -202,7 +202,10 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	hsize_t offset[2] = { 0, 0 };
 	hsize_t count[2] = { 1, n_longs };
 
-	unsigned int n_blacklisted_lines = 0;
+#ifdef DEBUG
+	unsigned int next_output = 0;
+	unsigned int n_blacklisted_lines = sum[attribute_to_blacklist];
+#endif
 
 	// Current long
 	unsigned long c_long = 0;
@@ -230,7 +233,6 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 
 				// The bit is set: Blacklist this line
 				line_blacklist[i] = BLACKLISTED;
-				n_blacklisted_lines++;
 
 				// Update sum removing the contribution from this line
 				for (unsigned int l = 0; l < n_longs; l++) {
@@ -250,7 +252,7 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 
 #ifdef DEBUG
 		if (i > next_output) {
-			fprintf(stdout, "[set_cover::blacklist_lines] %0.0f %%.\n",
+			fprintf(stdout, "  - Blacklisting lines %0.0f%%.\r",
 					((double) i) / n_lines * 100);
 			fflush( stdout);
 
@@ -261,8 +263,8 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	}
 
 #ifdef DEBUG
-	fprintf(stdout, "Blacklisted %d lines.\n", n_blacklisted_lines);
-	fflush( stdout);
+	fprintf(stdout, "  - Blacklisted %d lines ", n_blacklisted_lines);
+	TOCK(stdout)
 #endif
 
 	free(buffer);
@@ -277,11 +279,8 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 		const hid_t dataset_space_id, const hid_t memory_space_id,
 		const cover_t *cover) {
 
-#ifdef DEBUG
-	unsigned int next_output = 0;
-	fprintf(stdout, "[set_cover::update_sum] Starting.\n");
-	fflush( stdout);
-#endif
+	SETUP_TIMING
+	TICK
 
 	unsigned int n_longs = cover->n_longs;
 
@@ -304,6 +303,10 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 
 	// Current attribute
 	unsigned int c_attribute = 0;
+
+#ifdef DEBUG
+	unsigned int next_output = 0;
+#endif
 
 	// Calculate totals
 	for (unsigned int i = 0; i < n_lines; i++) {
@@ -334,7 +337,7 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 
 #ifdef DEBUG
 		if (i > next_output) {
-			fprintf(stdout, "[set_cover::update_sum] %0.0f%%.\n",
+			fprintf(stdout, " - Computing initial sum %0.0f%%.\r",
 					((double) i) / n_lines * 100);
 			fflush( stdout);
 
@@ -343,6 +346,11 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 #endif
 
 	}
+
+#ifdef DEBUG
+	fprintf(stdout, " - Calculated initial sum ");
+	TOCK(stdout)
+#endif
 
 	free(buffer);
 
@@ -369,7 +377,8 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 //}
 
 void print_solution(FILE *stream, cover_t *cover) {
-	fprintf(stream, "Solution: { ");
+
+	fprintf(stream, "\nSolution: { ");
 	for (unsigned int i = 0; i < cover->n_attributes; i++) {
 		if (cover->attribute_blacklist[i] == BLACKLISTED) {
 			// This attribute is set so it's part of the solution
@@ -380,6 +389,7 @@ void print_solution(FILE *stream, cover_t *cover) {
 }
 
 void free_cover(cover_t *cover) {
+
 	free(cover->attribute_blacklist);
 	free(cover->line_blacklist);
 	free(cover->sum);
