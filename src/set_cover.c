@@ -192,13 +192,6 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 
 	unsigned int *sum = cover->sum;
 
-	// Number of lines to blacklist
-	// We know that we must blacklist sum[attribute_to_blacklist] lines
-	// so we use that to terminate the cycle earlier if we can
-	// avoiding having to read more lines from the dataset
-	const unsigned int n_lines_to_blacklist = sum[attribute_to_blacklist];
-	unsigned int n_blacklisted_lines = 0;
-
 	// Alocate buffer
 	unsigned long *buffer = (unsigned long*) malloc(
 			sizeof(unsigned long) * n_longs);
@@ -214,11 +207,11 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	unsigned long c_attribute = 0;
 
 #ifdef DEBUG
+	const unsigned int n_lines_to_blacklist = sum[attribute_to_blacklist];
 	unsigned int next_output = 0;
 #endif
 
-	for (unsigned int i = 0;
-			i < n_lines && n_blacklisted_lines < n_lines_to_blacklist; i++) {
+	for (unsigned int i = 0; i < n_lines; i++) {
 
 		if (line_blacklist[i] != BLACKLISTED) {
 
@@ -239,14 +232,8 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 				// The bit is set: Blacklist this line
 				line_blacklist[i] = BLACKLISTED;
 
-				n_blacklisted_lines++;
-
 				// Update sum removing the contribution from this line
 				for (unsigned int l = 0; l < n_longs; l++) {
-
-					if (buffer[l] == 0UL) {
-						continue;
-					}
 
 					c_long = buffer[l];
 					c_attribute = l * BLOCK_BITS;
@@ -271,11 +258,10 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 			next_output += n_lines / 10;
 		}
 #endif
-
 	}
 
 #ifdef DEBUG
-	fprintf(stdout, "  - Blacklisted %d lines ", n_blacklisted_lines);
+	fprintf(stdout, "  - Blacklisted %d lines ", n_lines_to_blacklist);
 	TOCK(stdout)
 #endif
 
