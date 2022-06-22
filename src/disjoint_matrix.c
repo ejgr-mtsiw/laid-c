@@ -8,11 +8,9 @@
 
 #include "disjoint_matrix.h"
 
-/**
- * Calculates the number of lines for the disjoint matrix
- */
 unsigned long calculate_number_of_lines_of_disjoint_matrix(
 		const dataset_t *dataset) {
+
 	// Calculate number of lines for the matrix
 	unsigned long n_lines = 0;
 
@@ -29,13 +27,14 @@ unsigned long calculate_number_of_lines_of_disjoint_matrix(
 	return n_lines;
 }
 
-/**
- * Builds the disjoint matrix and saves it to the hdf5 dataset file
- * If the dataset already exists it assumes it's filled from a previous run
- * and will do nothing
- */
-herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
-		const dataset_t *dataset) {
+bool is_matrix_created(const char *filename) {
+
+	return hdf5_dataset_exists_in_file(filename, DISJOINT_MATRIX_DATASET_NAME);
+}
+
+int create_disjoint_matrix(const char *filename, const dataset_t *dataset) {
+
+	int ret = OK;
 
 	// Open file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -43,44 +42,25 @@ herr_t create_disjoint_matrix(const char *filename, const char *datasetname,
 		// Error creating file
 		fprintf(stderr, "Error opening file %s\n", filename);
 
-		return -1;
+		return NOK;
 	}
 
-	// Open dataset
-	// If it exists assume it's filled
-	// WHATIF: should we NOT assume it's filled and recalculate?
+	if (create_disjoint_matrix_dataset(file_id, dataset) != OK) {
 
-	hid_t dm_dataset_id = H5Dopen2(file_id, datasetname, H5P_DEFAULT);
-	if (dm_dataset_id < 0) {
-		// Dataset does not exist
-		fprintf(stdout, "Matrix dataset not found. Creating new\n");
-
-		if (create_disjoint_matrix_dataset(file_id, dataset) != 0) {
-
-			fprintf(stderr, "Error creating new disjoint matrix dataset\n");
-
-			H5Fclose(file_id);
-
-			return -1;
-		}
+		fprintf(stderr, "Error creating new disjoint matrix dataset\n");
+		ret = NOK;
 	}
 
 	H5Fclose(file_id);
 
-	return 0;
+	return ret;
 }
 
-/**
- * Creates a new disjoint matrix dataset
- */
-herr_t create_disjoint_matrix_dataset(const hid_t file_id,
+int create_disjoint_matrix_dataset(const hid_t file_id,
 		const dataset_t *dataset) {
 
 	// Number of longs in a line
 	unsigned int n_longs = dataset->n_longs;
-
-	// Number of attributes
-	//unsigned int n_attributes = dataset->n_attributes;
 
 	// Number of observations
 	unsigned int n_observations = dataset->n_observations;
@@ -97,6 +77,8 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 	unsigned long n_lines = calculate_number_of_lines_of_disjoint_matrix(
 			dataset);
 
+	int ret = OK;
+
 	// Dataset dimensions
 	hsize_t dm_dimensions[2] = { n_lines, n_longs };
 
@@ -104,7 +86,7 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 	if (dm_dataset_space_id < 0) {
 		// Error creating file
 		fprintf(stderr, "Error creating dataset space\n");
-		return -1;
+		return NOK;
 	}
 
 	// Create a dataset creation property list
@@ -119,11 +101,20 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 
 	// Create the dataset
 	hid_t dm_dataset_id = H5Dcreate2(file_id, DISJOINT_MATRIX_DATASET_NAME,
-	H5T_NATIVE_ULONG, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
-	H5P_DEFAULT);
+			H5T_STD_U64LE, dm_dataset_space_id, H5P_DEFAULT,
+			dm_property_list_id, H5P_DEFAULT);
 	if (dm_dataset_id < 0) {
 		fprintf(stderr, "Error creating disjoint matrix dataset\n");
-		return -1;
+		ret = NOK;
+		goto out_dataset_space;
+	}
+
+	// Save attributes
+	if (create_disjoint_matrix_attributes(dm_dataset_id, dataset) < 0) {
+
+		fprintf(stderr, "Error saving matrix atributes");
+		ret = NOK;
+		goto out_dataset;
 	}
 
 	// Close resources
@@ -132,6 +123,11 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 	// Create a memory dataspace to indicate the size of our buffer/chunk
 	hid_t dm_memory_space_id = H5Screate_simple(2, dm_chunk_dimensions,
 	NULL);
+	if (dm_memory_space_id < 0) {
+		fprintf(stderr, "Error creating disjoint matrix memory space\n");
+		ret = NOK;
+		goto out_memory_space;
+	}
 
 	// Alocate buffer
 	unsigned long *buffer = (unsigned long*) malloc(
@@ -140,6 +136,10 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 	// We will write one line at a time
 	hsize_t count[2] = { 1, dm_chunk_dimensions[1] };
 	hsize_t offset[2] = { 0, 0 };
+
+#ifdef DEBUG
+	unsigned int next_output = 0;
+#endif
 
 	// Current line
 	for (unsigned int i = 0; i < n_classes - 1; i++) {
@@ -166,6 +166,16 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 
 					// Update offset
 					offset[0]++;
+
+#ifdef DEBUG
+					if (offset[0] > next_output) {
+						fprintf(stdout, "Writing disjoint matrix: %0.0f%%.\r",
+								((double) offset[0]) / n_lines * 100);
+						fflush( stdout);
+
+						next_output += n_lines / 10;
+					}
+#endif
 				}
 			}
 		}
@@ -173,10 +183,18 @@ herr_t create_disjoint_matrix_dataset(const hid_t file_id,
 
 	free(buffer);
 
-	H5Sclose(dm_memory_space_id);
-	H5Sclose(dm_dataset_space_id);
+	out_memory_space: H5Sclose(dm_memory_space_id);
 
-	H5Dclose(dm_dataset_id);
+	out_dataset_space: H5Sclose(dm_dataset_space_id);
 
-	return 0;
+	out_dataset: H5Dclose(dm_dataset_id);
+
+	return ret;
+}
+
+herr_t create_disjoint_matrix_attributes(const hid_t dataset_id,
+		const dataset_t *dataset) {
+
+	return hdf5_write_attribute(dataset_id, HDF5_N_ATTRIBUTES_ATTRIBUTE,
+	H5T_NATIVE_UINT, &dataset->n_attributes);
 }

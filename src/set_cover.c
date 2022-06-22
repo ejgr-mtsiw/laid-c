@@ -12,8 +12,10 @@
  * Applies the set cover algorithm to the hdf5 dataset and prints
  * the minimum attribute set that covers all the lines
  */
-herr_t calculate_solution(const char *filename, const char *datasetname,
+int calculate_solution(const char *filename, const char *datasetname,
 		cover_t *cover) {
+
+	int ret = OK;
 
 	// Open file
 	hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -21,7 +23,7 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 		// Error creating file
 		fprintf(stderr, "Error opening file %s\n", filename);
 
-		return -1;
+		return NOK;
 	}
 
 	// Open dataset
@@ -30,46 +32,33 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 		// Error creating file
 		fprintf(stderr, "Dataset %s not found!\n", datasetname);
 
-		// Free resources
-		close_resources(file_id, 0, 0, 0);
-
-		return -1;
+		ret = NOK;
+		goto out_close_file;
 	}
 
+	hsize_t dm_dimensions[2];
+	hdf5_get_dataset_dimensions(dataset_id, dm_dimensions);
+
+	// Get number of lines of disjoint matrix
+	unsigned long n_lines = dm_dimensions[0];
+
 	// Number of longs in a line
-	unsigned int n_longs = cover->dataset->n_longs;
+	unsigned int n_longs = dm_dimensions[1];
 
 	// Number of attributes
-	unsigned int n_attributes = cover->dataset->n_attributes;
-
-	// Number of observations
-//	unsigned int n_observations = cover->dataset->n_observations;
-
-// Number of classes
-//	unsigned int n_classes = cover->dataset->n_classes;
-
-// Observations per class
-//	unsigned long **observations_per_class =
-//			cover->dataset->observations_per_class;
-
-// Number of observations per class
-//	unsigned int *n_observations_per_class =
-//			cover->dataset->n_observations_per_class;
-
-// Calculate number of lines of disjoint matrix
-	unsigned long n_lines = cover->matrix_n_lines;
+	unsigned int n_attributes = 0;
+	hdf5_read_attribute(dataset_id, HDF5_N_ATTRIBUTES_ATTRIBUTE,
+	H5T_NATIVE_UINT, &n_attributes);
 
 	// Setup memory space
-	hsize_t dm_dimensions[2] = { n_lines, n_longs };
+	//hsize_t dm_dimensions[2] = { n_lines, n_longs };
 	hid_t dm_dataset_space_id = H5Screate_simple(2, dm_dimensions, NULL);
 	if (dm_dataset_space_id < 0) {
 		// Error creating file
 		fprintf(stderr, "Error creating dataset space\n");
 
-		// Free resources
-		close_resources(file_id, dataset_id, 0, 0);
-
-		return -1;
+		ret = NOK;
+		goto out_close_dataset;
 	}
 
 	// The choice of the chunk size affects performance!
@@ -78,6 +67,10 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 
 	// Create a memory dataspace to indicate the size of our buffer/chunk
 	hid_t dm_memory_space_id = H5Screate_simple(2, dm_chunk_dimensions, NULL);
+
+	cover->n_longs = n_longs;
+	cover->matrix_n_lines = n_lines;
+	cover->n_attributes = n_attributes;
 
 	// Update column totals
 	/**
@@ -89,11 +82,8 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 	if (cover->attribute_blacklist == NULL) {
 		fprintf(stderr, "Error allocating attribute blacklist array\n");
 
-		// Free resources
-		close_resources(file_id, dataset_id, dm_dataset_space_id,
-				dm_memory_space_id);
-
-		return -1;
+		ret = NOK;
+		goto out_close_memory_space;
 	}
 
 	/**
@@ -103,11 +93,8 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 	if (cover->line_blacklist == NULL) {
 		fprintf(stderr, "Error allocating line blacklist array\n");
 
-		// Free resources
-		close_resources(file_id, dataset_id, dm_dataset_space_id,
-				dm_memory_space_id);
-
-		return -1;
+		ret = NOK;
+		goto out_close_memory_space;
 	}
 
 	/**
@@ -117,14 +104,9 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 	if (cover->sum == NULL) {
 		fprintf(stderr, "Error allocating sum array\n");
 
-		// Free resources
-		close_resources(file_id, dataset_id, dm_dataset_space_id,
-				dm_memory_space_id);
-
-		return -1;
+		ret = NOK;
+		goto out_close_memory_space;
 	}
-
-	unsigned int *sum = cover->sum;
 
 	// Calculate initial sum for each attribute
 	calculate_initial_sum(dataset_id, dm_dataset_space_id, dm_memory_space_id,
@@ -132,6 +114,9 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 
 	unsigned int max_total = 0;
 	unsigned int attribute_to_blacklist = 0;
+	unsigned int *sum = cover->sum;
+
+	unsigned int round = 1;
 
 	do {
 
@@ -146,16 +131,17 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 			}
 		}
 
-		if (max_total <= 0) {
+		if (max_total == 0) {
 			// Nothing else to do here: we have a solution that covers the
 			// full disjoint matrix
 			break;
 		}
 
+		fprintf(stdout, "\n - Selecting attribute round #%d\n", round++);
+
 		// Blacklist attribute with max total
-		cover->attribute_blacklist[attribute_to_blacklist] = 1;
-		fprintf(stdout, "  - Blacklisted: %d\n", attribute_to_blacklist + 1);
-		fflush( stdout);
+		cover->attribute_blacklist[attribute_to_blacklist] = BLACKLISTED;
+		fprintf(stdout, "  - Selected attribute #%d\n", attribute_to_blacklist);
 
 		// Blacklist lines that have the blacklisted attribute set
 		blacklist_lines(dataset_id, dm_dataset_space_id, dm_memory_space_id,
@@ -163,36 +149,29 @@ herr_t calculate_solution(const char *filename, const char *datasetname,
 
 	} while (max_total > 0);
 
+	out_close_memory_space: H5Sclose(dm_memory_space_id);
+
+	H5Sclose(dm_dataset_space_id);
+
+	out_close_dataset: H5Dclose(dataset_id);
+
+	out_close_file: H5Fclose(file_id);
+
 	free(cover->sum);
 	free(cover->line_blacklist);
 
-	// Free resources
-	close_resources(file_id, dataset_id, dm_dataset_space_id,
-			dm_memory_space_id);
+	cover->sum = NULL;
+	cover->line_blacklist = NULL;
 
-	fprintf(stdout, "Solution: { ");
-	for (unsigned int i = 0; i < n_attributes; i++) {
-		if (cover->attribute_blacklist[i]) {
-			// This attribute is set so it's part of the solution
-			printf("%d ", i + 1);
-		}
-	}
-	printf("}\n");
-
-	free(cover->attribute_blacklist);
-
-	return 0;
+	return ret;
 }
 
 herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 		const hid_t memory_space_id, const cover_t *cover,
 		const unsigned int attribute_to_blacklist) {
 
-#ifdef DEBUG
-	unsigned int next_output = 0;
-	fprintf(stdout, "[set_cover::blacklist_lines] Starting.\n");
-	fflush( stdout);
-#endif
+	SETUP_TIMING
+	TICK
 
 	// Attribute to blacklist is in long n
 	unsigned int n = attribute_to_blacklist / BLOCK_BITS;
@@ -201,10 +180,10 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	unsigned char bit = BLOCK_BITS - 1 - attribute_to_blacklist % BLOCK_BITS;
 
 	// Number of longs in a line
-	unsigned int n_longs = cover->dataset->n_longs;
+	unsigned int n_longs = cover->n_longs;
 
 	// Number of attributes
-	unsigned int n_attributes = cover->dataset->n_attributes;
+	unsigned int n_attributes = cover->n_attributes;
 
 	// Calculate number of lines of disjoint matrix
 	unsigned long n_lines = cover->matrix_n_lines;
@@ -221,13 +200,16 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	hsize_t offset[2] = { 0, 0 };
 	hsize_t count[2] = { 1, n_longs };
 
-	unsigned int n_blacklisted_lines = 0;
-
 	// Current long
 	unsigned long c_long = 0;
 
 	// Current attribute
 	unsigned long c_attribute = 0;
+
+#ifdef DEBUG
+	const unsigned int n_lines_to_blacklist = sum[attribute_to_blacklist];
+	unsigned int next_output = 0;
+#endif
 
 	for (unsigned int i = 0; i < n_lines; i++) {
 
@@ -249,10 +231,10 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 
 				// The bit is set: Blacklist this line
 				line_blacklist[i] = BLACKLISTED;
-				n_blacklisted_lines++;
 
 				// Update sum removing the contribution from this line
 				for (unsigned int l = 0; l < n_longs; l++) {
+
 					c_long = buffer[l];
 					c_attribute = l * BLOCK_BITS;
 
@@ -269,20 +251,21 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 
 #ifdef DEBUG
 		if (i > next_output) {
-			fprintf(stdout, "[set_cover::blacklist_lines] %0.0f %%.\n",
+			fprintf(stdout, "  - Blacklisting lines %0.0f%%.\r",
 					((double) i) / n_lines * 100);
 			fflush( stdout);
 
 			next_output += n_lines / 10;
 		}
 #endif
-
 	}
 
 #ifdef DEBUG
-	fprintf(stdout, "Blacklisted %d lines.\n", n_blacklisted_lines);
-	fflush( stdout);
+	fprintf(stdout, "  - Blacklisted %d lines ", n_lines_to_blacklist);
+	TOCK(stdout)
 #endif
+
+	free(buffer);
 
 	return 0;
 }
@@ -294,17 +277,14 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 		const hid_t dataset_space_id, const hid_t memory_space_id,
 		const cover_t *cover) {
 
-#ifdef DEBUG
-	unsigned int next_output = 0;
-	fprintf(stdout, "[set_cover::update_sum] Starting.\n");
-	fflush( stdout);
-#endif
+	SETUP_TIMING
+	TICK
 
-	unsigned int n_longs = cover->dataset->n_longs;
+	unsigned int n_longs = cover->n_longs;
 
 	unsigned long n_lines = cover->matrix_n_lines;
 
-	unsigned int n_attributes = cover->dataset->n_attributes;
+	unsigned int n_attributes = cover->n_attributes;
 
 	unsigned int *sum = cover->sum;
 
@@ -321,6 +301,10 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 
 	// Current attribute
 	unsigned int c_attribute = 0;
+
+#ifdef DEBUG
+	unsigned int next_output = 0;
+#endif
 
 	// Calculate totals
 	for (unsigned int i = 0; i < n_lines; i++) {
@@ -351,7 +335,7 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 
 #ifdef DEBUG
 		if (i > next_output) {
-			fprintf(stdout, "[set_cover::update_sum] %0.0f%%.\n",
+			fprintf(stdout, " - Computing initial sum %0.0f%%.\r",
 					((double) i) / n_lines * 100);
 			fflush( stdout);
 
@@ -360,6 +344,11 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 #endif
 
 	}
+
+#ifdef DEBUG
+	fprintf(stdout, " - Calculated initial sum ");
+	TOCK(stdout)
+#endif
 
 	free(buffer);
 
@@ -385,23 +374,25 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 //	}
 //}
 
-void close_resources(hid_t file_id, hid_t dataset_id, hid_t dm_dataset_space_id,
-		hid_t dm_memory_space_id) {
+void print_solution(FILE *stream, cover_t *cover) {
 
-	// Free resources
-	if (dm_memory_space_id != 0) {
-		H5Sclose(dm_memory_space_id);
+	fprintf(stream, "\nSolution: { ");
+	for (unsigned int i = 0; i < cover->n_attributes; i++) {
+		if (cover->attribute_blacklist[i] == BLACKLISTED) {
+			// This attribute is set so it's part of the solution
+			fprintf(stream, "%d ", i);
+		}
 	}
+	fprintf(stream, "}\n");
+}
 
-	if (dm_dataset_space_id != 0) {
-		H5Sclose(dm_dataset_space_id);
-	}
+void free_cover(cover_t *cover) {
 
-	if (dataset_id != 0) {
-		H5Dclose(dataset_id);
-	}
+	free(cover->attribute_blacklist);
+	free(cover->line_blacklist);
+	free(cover->sum);
 
-	if (file_id != 0) {
-		H5Fclose(file_id);
-	}
+	cover->attribute_blacklist = NULL;
+	cover->line_blacklist = NULL;
+	cover->sum = NULL;
 }

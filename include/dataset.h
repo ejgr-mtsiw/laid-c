@@ -15,6 +15,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 //
@@ -27,17 +28,6 @@
 #define DATASET_NOT_ENOUGH_ATTRIBUTES 4
 #define DATASET_NOT_ENOUGH_OBSERVATIONS 8
 #define DATASET_ERROR_ALLOCATING_DATA 16
-
-// Used in debugging
-#ifdef DEBUG
-//#define DEBUG_PRINT_DATASET(stream, title,dataset, extra) print_dataset(stream, title, dataset, extra);
-#define DEBUG_PRINT_DATASET(stream, title,dataset, extra)
-#else
-#define DEBUG_PRINT_DATASET(stream, title,dataset, extra)
-#endif
-
-#define PRINT_WITHOUT_EXTRA_BITS false
-#define PRINT_WITH_EXTRA_BITS true
 
 /**
  *
@@ -131,17 +121,16 @@ unsigned int remove_duplicates(dataset_t *dataset);
  * references to the lines that belong to each class to simplify the
  * calculation of the disjoint matrix
  */
-void fill_class_arrays(dataset_t *dataset);
+int fill_class_arrays(dataset_t *dataset);
 
 /**
- * Prints a line to stream
+ * Prints some attributes of the dataset to stream
  */
-void print_line(FILE *stream, const unsigned long *line, const bool extra_bits);
+void print_dataset_details(FILE *stream, const dataset_t *dataset);
 
 /**
- * Prints the whole dataset
+ * Frees dataset memory
  */
-void print_dataset(FILE *stream, const char *title, dataset_t *dataset,
-		const bool extra_bits);
+void free_dataset(dataset_t *dataset);
 
 #endif
