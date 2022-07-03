@@ -7,10 +7,10 @@
  */
 
 //
+#include "globals.h"
 #include "clargs.h"
 #include "dataset.h"
 #include "disjoint_matrix.h"
-#include "globals.h"
 #include "jnsq.h"
 #include "set_cover.h"
 #include "sort_r.h"
@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
 
 	SETUP_TIMING
 
+	// Timing for the full operation
 	struct timespec main_tick,
 	main_tock;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &main_tick);
