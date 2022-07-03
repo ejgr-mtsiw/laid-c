@@ -128,9 +128,6 @@ herr_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t *dataset) {
 	}
 
 	// Store data
-	dataset->data = NULL;
-	dataset->n_observations_per_class = NULL;
-	dataset->observations_per_class = NULL;
 	dataset->n_attributes = n_attributes;
 	dataset->n_bits_for_class = (unsigned int) ceil(log2(n_classes));
 	dataset->n_bits_for_jnsqs = 0;
@@ -163,21 +160,21 @@ herr_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
 		return status;
 	}
 
-// Open the attribute
+	// Open the attribute
 	hid_t attr = H5Aopen(dataset_id, attribute, H5P_DEFAULT);
 	if (attr < 0) {
 		fprintf(stderr, "Error closing the attribute %s", attribute);
 		return attr;
 	}
 
-// read the attribute value
+	// read the attribute value
 	status = H5Aread(attr, datatype, value);
 	if (status < 0) {
 		fprintf(stderr, "Error reading attribute %s", attribute);
 		return status;
 	}
 
-// close the attribute
+	// close the attribute
 	status = H5Aclose(attr);
 	if (status < 0) {
 		fprintf(stderr, "Error closing the attribute %s", attribute);
@@ -187,8 +184,8 @@ herr_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
 
 herr_t hdf5_read_data(hid_t dataset_id, dataset_t *dataset) {
 
-// Allocate main buffer
-// https://vorpus.org/blog/why-does-calloc-exist/
+	// Allocate main buffer
+	// https://vorpus.org/blog/why-does-calloc-exist/
 	/**
 	 * The dataset data
 	 */
@@ -200,7 +197,7 @@ herr_t hdf5_read_data(hid_t dataset_id, dataset_t *dataset) {
 		return NOK;
 	}
 
-// Fill dataset from hdf5 file
+	// Fill dataset from hdf5 file
 	herr_t status = H5Dread(dataset_id, H5T_NATIVE_ULONG, H5S_ALL, H5S_ALL,
 	H5P_DEFAULT, dataset->data);
 
@@ -248,10 +245,10 @@ herr_t hdf5_write_attribute(hid_t dataset_id, const char *attribute,
 
 int hdf5_get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions) {
 
-// No chunking defined
+	// No chunking defined
 	int chunked = 0;
 
-// Get creation properties list.
+	// Get creation properties list.
 	hid_t property_list_id = H5Dget_create_plist(dataset_id);
 
 	if (H5D_CHUNKED == H5Pget_layout(property_list_id)) {

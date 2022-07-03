@@ -9,6 +9,22 @@
 #include "dataset.h"
 
 /**
+ * Initializes a dataset structure
+ */
+void init_dataset(dataset_t *dataset) {
+	// Store data
+	dataset->data = NULL;
+	dataset->n_observations_per_class = NULL;
+	dataset->observations_per_class = NULL;
+	dataset->n_attributes = 0;
+	dataset->n_bits_for_class = 0;
+	dataset->n_bits_for_jnsqs = 0;
+	dataset->n_classes = 0;
+	dataset->n_observations = 0;
+	dataset->n_longs = 0;
+}
+
+/**
  * Returns the class of this data line
  */
 unsigned int get_class(const unsigned long *line,

@@ -58,6 +58,8 @@ int main(int argc, char **argv) {
 
 		TICK
 
+		init_dataset(&dataset);
+
 		/**
 		 * READ DATASET
 		 */

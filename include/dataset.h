@@ -90,6 +90,11 @@ typedef struct dataset_t {
 } dataset_t;
 
 /**
+ * Initializes a dataset structure
+ */
+void init_dataset(dataset_t *dataset);
+
+/**
  * Returns the class of this data line
  */
 unsigned int get_class(const unsigned long *line,
