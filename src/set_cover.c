@@ -206,10 +206,8 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 	// Current attribute
 	unsigned long c_attribute = 0;
 
-#ifdef DEBUG
 	const unsigned int n_lines_to_blacklist = sum[attribute_to_blacklist];
 	unsigned int next_output = 0;
-#endif
 
 	for (unsigned int i = 0; i < n_lines; i++) {
 
@@ -249,7 +247,6 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 			}
 		}
 
-#ifdef DEBUG
 		if (i > next_output) {
 			fprintf(stdout, "  - Blacklisting lines %0.0f%%.\r",
 					((double) i) / n_lines * 100);
@@ -257,13 +254,10 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 
 			next_output += n_lines / 10;
 		}
-#endif
 	}
 
-#ifdef DEBUG
 	fprintf(stdout, "  - Blacklisted %d lines ", n_lines_to_blacklist);
 	TOCK(stdout)
-#endif
 
 	free(buffer);
 
@@ -302,9 +296,7 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 	// Current attribute
 	unsigned int c_attribute = 0;
 
-#ifdef DEBUG
 	unsigned int next_output = 0;
-#endif
 
 	// Calculate totals
 	for (unsigned int i = 0; i < n_lines; i++) {
@@ -333,7 +325,6 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 			}
 		}
 
-#ifdef DEBUG
 		if (i > next_output) {
 			fprintf(stdout, " - Computing initial sum %0.0f%%.\r",
 					((double) i) / n_lines * 100);
@@ -341,14 +332,11 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 
 			next_output += n_lines / 10;
 		}
-#endif
 
 	}
 
-#ifdef DEBUG
 	fprintf(stdout, " - Calculated initial sum ");
 	TOCK(stdout)
-#endif
 
 	free(buffer);
 
