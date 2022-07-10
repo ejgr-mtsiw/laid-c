@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
 
 	TICK
 	fprintf(stdout, "\nApplying set covering algorithm.\n");
-	if (calculate_solution(args.filename, DISJOINT_MATRIX_DATASET_NAME,
+	if (calculate_solution(args.filename, DM_DATASET_ATTRIBUTES_COLUMN,
 			&cover) != OK) {
 		return EXIT_FAILURE;
 	}
