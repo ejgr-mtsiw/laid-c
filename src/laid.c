@@ -7,10 +7,10 @@
  */
 
 //
+#include "globals.h"
 #include "clargs.h"
 #include "dataset.h"
 #include "disjoint_matrix.h"
-#include "globals.h"
 #include "jnsq.h"
 #include "set_cover.h"
 #include "sort_r.h"
@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
 
 	SETUP_TIMING
 
+	// Timing for the full operation
 	struct timespec main_tick,
 	main_tock;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &main_tick);
@@ -58,6 +59,8 @@ int main(int argc, char **argv) {
 
 		TICK
 
+		init_dataset(&dataset);
+
 		/**
 		 * READ DATASET
 		 */
@@ -70,7 +73,7 @@ int main(int argc, char **argv) {
 		print_dataset_details(stdout, &dataset);
 
 		fprintf(stdout, "Finished loading dataset ");
-		TOCK(stdout);
+		TOCK(stdout)
 
 		TICK
 
@@ -82,14 +85,14 @@ int main(int argc, char **argv) {
 				&dataset.n_longs);
 
 		fprintf(stdout, "\nSorted dataset ");
-		TOCK(stdout);
+		TOCK(stdout)
 
 		TICK
 		// Remove duplicates
 		fprintf(stdout, "\nRemoving duplicates:\n");
 		unsigned int duplicates = remove_duplicates(&dataset);
 		fprintf(stdout, " - %d duplicate(s) removed ", duplicates);
-		TOCK(stdout);
+		TOCK(stdout)
 
 		TICK
 
@@ -106,7 +109,7 @@ int main(int argc, char **argv) {
 					dataset.n_observations_per_class[i]);
 		}
 
-		TOCK(stdout);
+		TOCK(stdout)
 
 		TICK
 
@@ -115,7 +118,7 @@ int main(int argc, char **argv) {
 		unsigned int max_jnsq = add_jnsqs(&dataset);
 		fprintf(stdout, " - Max JNSQ: %d [%d bits] ", max_jnsq,
 				dataset.n_bits_for_jnsqs);
-		TOCK(stdout);
+		TOCK(stdout)
 
 		TICK
 
@@ -136,7 +139,7 @@ int main(int argc, char **argv) {
 		}
 
 		fprintf(stdout, "Finished building disjoint matrix ");
-		TOCK(stdout);
+		TOCK(stdout)
 
 		/**
 		 * From this point forward we no longer need the dataset

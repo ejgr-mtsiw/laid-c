@@ -11,10 +11,10 @@
 
 #include "bit_utils.h"
 #include "globals.h"
-#include "hdf5.h"
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -88,6 +88,11 @@ typedef struct dataset_t {
 	unsigned long **observations_per_class;
 
 } dataset_t;
+
+/**
+ * Initializes a dataset structure
+ */
+void init_dataset(dataset_t *dataset);
 
 /**
  * Returns the class of this data line
