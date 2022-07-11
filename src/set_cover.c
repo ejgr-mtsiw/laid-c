@@ -149,13 +149,16 @@ int calculate_solution(const char *filename, const char *datasetname,
 
 	} while (max_total > 0);
 
-	out_close_memory_space: H5Sclose(dm_memory_space_id);
+out_close_memory_space:
+	H5Sclose(dm_memory_space_id);
 
 	H5Sclose(dm_dataset_space_id);
 
-	out_close_dataset: H5Dclose(dataset_id);
+out_close_dataset:
+	H5Dclose(dataset_id);
 
-	out_close_file: H5Fclose(file_id);
+out_close_file:
+	H5Fclose(file_id);
 
 	free(cover->sum);
 	free(cover->line_blacklist);

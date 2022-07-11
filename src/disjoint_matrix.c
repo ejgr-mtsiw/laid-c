@@ -196,13 +196,17 @@ int create_attribute_column_dataset(const hid_t file_id,
 		}
 	}
 
-	out_free_buffer: free(buffer);
+out_free_buffer:
+	free(buffer);
 
-	out_memory_space: H5Sclose(dm_memory_space_id);
+out_memory_space:
+	H5Sclose(dm_memory_space_id);
 
-	out_dataset_space: H5Sclose(dm_dataset_space_id);
+out_dataset_space:
+	H5Sclose(dm_dataset_space_id);
 
-	out_dataset: H5Dclose(dm_dataset_id);
+out_dataset:
+	H5Dclose(dm_dataset_id);
 
 	return ret;
 }
@@ -347,11 +351,14 @@ int create_attribute_line_dataset(const hid_t file_id, const dataset_t *dataset)
 
 	free(buffer);
 
-	out_memory_space: H5Sclose(dm_memory_space_id);
+out_memory_space:
+	H5Sclose(dm_memory_space_id);
 
-	out_dataset_space: H5Sclose(dm_dataset_space_id);
+out_dataset_space:
+	H5Sclose(dm_dataset_space_id);
 
-	out_dataset: H5Dclose(dm_dataset_id);
+out_dataset:
+	H5Dclose(dm_dataset_id);
 
 	return ret;
 }

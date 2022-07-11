@@ -88,8 +88,8 @@ int hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t *dataset);
 /**
  * Reads the value of one attribute from the dataset
  */
-int hdf5_read_attribute(hid_t dataset_id, const char *attribute,
-		hid_t datatype, void *value);
+int hdf5_read_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
+		void *value);
 
 /**
  * Reads the dataset data from the hdf5 file

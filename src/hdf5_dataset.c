@@ -77,7 +77,8 @@ int hdf5_read_dataset(const char *filename, const char *datasetname,
 		fprintf(stderr, "Error reading data!\n");
 	}
 
-	out_close_dataset: H5Dclose(dataset_id);
+out_close_dataset:
+	H5Dclose(dataset_id);
 	H5Fclose(file_id);
 
 	return ret;
