@@ -17,27 +17,25 @@ int calculate_solution(const char *filename, const char *datasetname,
 
 	int ret = OK;
 
-	// Open file
-	hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-	if (file_id < 1) {
-		// Error creating file
-		fprintf(stderr, "Error opening file %s\n", filename);
+	hid_t file_id, dataset_id;
 
-		return NOK;
-	}
-
-	// Open dataset
-	hid_t dataset_id = H5Dopen2(file_id, datasetname, H5P_DEFAULT);
-	if (dataset_id < 1) {
-		// Error creating file
-		fprintf(stderr, "Dataset %s not found!\n", datasetname);
-
-		ret = NOK;
-		goto out_close_file;
+	ret = hdf5_open_dataset(filename, datasetname, &file_id, &dataset_id);
+	if (ret != OK) {
+		return ret;
 	}
 
 	hsize_t dm_dimensions[2];
 	hdf5_get_dataset_dimensions(dataset_id, dm_dimensions);
+
+	// Setup memory space
+	hid_t dm_dataset_space_id = H5Screate_simple(2, dm_dimensions, NULL);
+	if (dm_dataset_space_id < 0) {
+		// Error creating file
+		fprintf(stderr, "Error creating dataset space\n");
+
+		ret = NOK;
+		goto out_close_dataset;
+	}
 
 	// Get number of lines of disjoint matrix
 	unsigned long n_lines = dm_dimensions[0];
@@ -49,17 +47,6 @@ int calculate_solution(const char *filename, const char *datasetname,
 	unsigned int n_attributes = 0;
 	hdf5_read_attribute(dataset_id, HDF5_N_ATTRIBUTES_ATTRIBUTE,
 	H5T_NATIVE_UINT, &n_attributes);
-
-	// Setup memory space
-	//hsize_t dm_dimensions[2] = { n_lines, n_longs };
-	hid_t dm_dataset_space_id = H5Screate_simple(2, dm_dimensions, NULL);
-	if (dm_dataset_space_id < 0) {
-		// Error creating file
-		fprintf(stderr, "Error creating dataset space\n");
-
-		ret = NOK;
-		goto out_close_dataset;
-	}
 
 	// The choice of the chunk size affects performance!
 	// for now we will choose one line
@@ -151,13 +138,10 @@ int calculate_solution(const char *filename, const char *datasetname,
 
 out_close_memory_space:
 	H5Sclose(dm_memory_space_id);
-
 	H5Sclose(dm_dataset_space_id);
 
 out_close_dataset:
 	H5Dclose(dataset_id);
-
-out_close_file:
 	H5Fclose(file_id);
 
 	free(cover->sum);
