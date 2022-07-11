@@ -17,41 +17,6 @@
 #include <stdint.h>
 
 /**
- * Number of ranks for data
- */
-#define DATA_RANK 2
-
-/**
- * Reads only the dataset attributes on file
- */
-#define READ_DATASET_ATTRIBUTES 1
-
-/**
- * Reads the dataset data on file
- */
-#define READ_DATASET_DATA 2
-
-/**
- * Attribute for number of classes
- */
-#define HDF5_N_CLASSES_ATTRIBUTE "n_classes"
-
-/**
- * Attribute for number of attributes
- */
-#define HDF5_N_ATTRIBUTES_ATTRIBUTE "n_attributes"
-
-/**
- * Attribute for number of observations
- */
-#define HDF5_N_OBSERVATIONS_ATTRIBUTE "n_observations"
-
-/**
- * Attrinute for the number of lines of the disjoint matrix
- */
-#define HDF5_N_MATRIX_LINES_ATTRIBUTE "n_matrix_lines"
-
-/**
  * Checks if dataset is present in file_id
  */
 bool hdf5_dataset_exists(const hid_t file_id, const char *dataset);

@@ -18,10 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-//
-#define NOT_BLACKLISTED false
-#define BLACKLISTED true
-
 #define DATASET_INVALID_DIMENSIONS 1
 #define DATASET_NOT_ENOUGH_CLASSES 2
 #define DATASET_NOT_ENOUGH_ATTRIBUTES 4

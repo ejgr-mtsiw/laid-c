@@ -18,18 +18,6 @@
 #include <stdint.h>
 
 /**
- * The name of the dataset that will store the disjoint matrix
- * with attributes as lines
- */
-#define DM_DATASET_ATTRIBUTES_LINE "DMX_LINE"
-
-/**
- * The name of the dataset that will store the disjoint matrix
- * with attributes as columns
- */
-#define DM_DATASET_ATTRIBUTES_COLUMN "DMX_COLUMN"
-
-/**
  * Calculates the number of lines for the disjoint matrix
  */
 unsigned long calculate_number_of_lines_of_disjoint_matrix(

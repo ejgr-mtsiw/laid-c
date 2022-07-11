@@ -272,7 +272,7 @@ int hdf5_get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions)
 
 	if (H5D_CHUNKED == H5Pget_layout(property_list_id)) {
 		// Get chunking information: rank and dimensions
-		H5Pget_chunk(property_list_id, DATA_RANK, chunk_dimensions);
+		H5Pget_chunk(property_list_id, 2, chunk_dimensions);
 
 		chunked = H5D_CHUNKED;
 	}
