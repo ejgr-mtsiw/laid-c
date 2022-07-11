@@ -62,48 +62,44 @@ bool hdf5_dataset_exists(const hid_t file_id, const char *dataset);
 bool hdf5_dataset_exists_in_file(const char *filename, const char *datasetname);
 
 /**
+ * Opens the file and dataset indicated, returning references
+ * in file_id and dataset_id
+ */
+int hdf5_open_dataset(const char *filename, const char *datasetname,
+		hid_t *file_id, hid_t *dataset_id);
+
+/**
  * Fills the dataset structure
  */
-herr_t hdf5_read_dataset(const char *filename, const char *datasetname,
+int hdf5_read_dataset(const char *filename, const char *datasetname,
 		dataset_t *dataset);
 
 /**
  * Fills the dataset attributes only
  */
-herr_t hdf5_read_dataset_attributes_only(const char *filename,
+int hdf5_read_dataset_attributes_only(const char *filename,
 		const char *datasetname, dataset_t *dataset);
-
-/**
- * Reads the data from the hdf5 dataset
- */
-herr_t hdf5_read_hdf5_dataset(const char *filename, const char *datasetname,
-		dataset_t *dataset, const char data_to_read);
 
 /**
  * Reads the dataset attributes from the hdf5 file
  */
-herr_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t *dataset);
-
-/**
- * Reads the number_of lines from the disjoint matrix in the hdf5 file
- */
-unsigned long hdf5_read_dm_lines(const char *filename);
+int hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t *dataset);
 
 /**
  * Reads the value of one attribute from the dataset
  */
-herr_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
+int hdf5_read_attribute(hid_t dataset_id, const char *attribute,
 		hid_t datatype, void *value);
 
 /**
  * Reads the dataset data from the hdf5 file
  */
-herr_t hdf5_read_data(hid_t dataset_id, dataset_t *dataset);
+int hdf5_read_data(hid_t dataset_id, dataset_t *dataset);
 
 /**
  * Writes an attribute to the dataset
  */
-herr_t hdf5_write_attribute(hid_t dataset_id, const char *attribute,
+int hdf5_write_attribute(hid_t dataset_id, const char *attribute,
 		hid_t datatype, const void *value);
 
 /**

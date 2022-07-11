@@ -64,8 +64,7 @@ int main(int argc, char **argv) {
 		/**
 		 * READ DATASET
 		 */
-		if (hdf5_read_dataset(args.filename, args.datasetname,
-				&dataset) != DATASET_OK) {
+		if (hdf5_read_dataset(args.filename, args.datasetname, &dataset) != OK) {
 			// Error reading attributes
 			return EXIT_FAILURE;
 		}

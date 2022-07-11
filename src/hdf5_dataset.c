@@ -8,9 +8,9 @@
 
 #include "hdf5_dataset.h"
 
-bool hdf5_dataset_exists(const hid_t file_id, const char *name) {
+bool hdf5_dataset_exists(const hid_t file_id, const char *datasetname) {
 
-	return (H5Lexists(file_id, name, H5P_DEFAULT) > 0);
+	return (H5Lexists(file_id, datasetname, H5P_DEFAULT) > 0);
 }
 
 bool hdf5_dataset_exists_in_file(const char *filename, const char *datasetname) {
@@ -30,73 +30,84 @@ bool hdf5_dataset_exists_in_file(const char *filename, const char *datasetname) 
 	return exists;
 }
 
-/**
- * Reads the data from the hdf5 dataset
- */
-herr_t hdf5_read_hdf5_dataset(const char *filename, const char *datasetname,
-		dataset_t *dataset, const char data_to_read) {
-
-	herr_t ret = DATASET_OK;
+int hdf5_open_dataset(const char *filename, const char *datasetname,
+		hid_t *file_id, hid_t *dataset_id) {
 
 	//Open the data file
-	hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-	if (file_id < 1) {
+	*file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (*file_id < 1) {
 		// Error creating file
 		fprintf(stderr, "Error opening file %s\n", filename);
 		return NOK;
 	}
 
 	// Open input dataset
-	hid_t dataset_id = H5Dopen2(file_id, datasetname, H5P_DEFAULT);
-	if (dataset_id < 1) {
+	*dataset_id = H5Dopen2(*file_id, datasetname, H5P_DEFAULT);
+	if (*dataset_id < 1) {
 		// Error opening dataset
 		fprintf(stderr, "Dataset %s not found!\n", datasetname);
-		ret = NOK;
-		goto out_close_file;
+		H5Fclose(*file_id);
+		return NOK;
 	}
 
-	if (data_to_read & READ_DATASET_ATTRIBUTES) {
-		ret = hdf5_read_dataset_attributes(dataset_id, dataset);
-		if (ret < 0) {
-			fprintf(stderr, "Error reading attributes!\n");
-			goto out_close_dataset;
-		}
+	return OK;
+}
+
+int hdf5_read_dataset(const char *filename, const char *datasetname,
+		dataset_t *dataset) {
+
+	int ret = OK;
+
+	hid_t file_id, dataset_id;
+
+	ret = hdf5_open_dataset(filename, datasetname, &file_id, &dataset_id);
+	if (ret != OK) {
+		fprintf(stderr, "Error opening dataset\n");
+		return ret;
 	}
 
-	if (data_to_read & READ_DATASET_DATA) {
-		ret = hdf5_read_data(dataset_id, dataset);
-		if (ret < 0) {
-			fprintf(stderr, "Error reading data!\n");
-		}
+	ret = hdf5_read_dataset_attributes(dataset_id, dataset);
+	if (ret != OK) {
+		fprintf(stderr, "Error reading attributes!\n");
+		goto out_close_dataset;
+	}
+
+	ret = hdf5_read_data(dataset_id, dataset);
+	if (ret != OK) {
+		fprintf(stderr, "Error reading data!\n");
 	}
 
 	out_close_dataset: H5Dclose(dataset_id);
-	out_close_file: H5Fclose(file_id);
+	H5Fclose(file_id);
 
 	return ret;
 }
 
-/**
- * Reads the dataset from the hdf5 file
- */
-herr_t hdf5_read_dataset(const char *filename, const char *datasetname,
+int hdf5_read_attributes(const char *filename, const char *datasetname,
 		dataset_t *dataset) {
 
-	return hdf5_read_hdf5_dataset(filename, datasetname, dataset,
-	READ_DATASET_ATTRIBUTES | READ_DATASET_DATA);
+	int ret = OK;
+
+	hid_t file_id, dataset_id;
+
+	ret = hdf5_open_dataset(filename, datasetname, &file_id, &dataset_id);
+	if (ret != OK) {
+		fprintf(stderr, "Error opening dataset\n");
+		return ret;
+	}
+
+	ret = hdf5_read_dataset_attributes(dataset_id, dataset);
+	if (ret != OK) {
+		fprintf(stderr, "Error reading attributes!\n");
+	}
+
+	H5Dclose(dataset_id);
+	H5Fclose(file_id);
+
+	return ret;
 }
 
-/**
- * Reads the dataset from the hdf5 file
- */
-herr_t hdf5_read_dataset_attributes_only(const char *filename,
-		const char *datasetname, dataset_t *dataset) {
-
-	return hdf5_read_hdf5_dataset(filename, datasetname, dataset,
-	READ_DATASET_ATTRIBUTES);
-}
-
-herr_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t *dataset) {
+int hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t *dataset) {
 
 	unsigned int n_classes = 0;
 	hdf5_read_attribute(dataset_id, HDF5_N_CLASSES_ATTRIBUTE, H5T_NATIVE_INT,
@@ -141,48 +152,50 @@ herr_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t *dataset) {
 
 	dataset->n_longs = n_longs;
 
-	return DATASET_OK;
+	return OK;
 }
 
-herr_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
-		hid_t datatype, void *value) {
+int hdf5_read_attribute(hid_t dataset_id, const char *attribute, hid_t datatype,
+		void *value) {
 
 	herr_t status = H5Aexists(dataset_id, attribute);
 	if (status < 0) {
 		// Error reading attribute
 		fprintf(stderr, "Error reading attribute %s", attribute);
-		return status;
+		return NOK;
 	}
 
 	if (status == 0) {
 		// Attribute does not exist
 		*(unsigned int*) value = 0;
-		return status;
+		return OK;
 	}
 
 	// Open the attribute
 	hid_t attr = H5Aopen(dataset_id, attribute, H5P_DEFAULT);
 	if (attr < 0) {
-		fprintf(stderr, "Error closing the attribute %s", attribute);
-		return attr;
+		fprintf(stderr, "Error opening the attribute %s", attribute);
+		return NOK;
 	}
 
 	// read the attribute value
 	status = H5Aread(attr, datatype, value);
 	if (status < 0) {
 		fprintf(stderr, "Error reading attribute %s", attribute);
-		return status;
+		return NOK;
 	}
 
 	// close the attribute
 	status = H5Aclose(attr);
 	if (status < 0) {
 		fprintf(stderr, "Error closing the attribute %s", attribute);
+		return NOK;
 	}
-	return status;
+
+	return OK;
 }
 
-herr_t hdf5_read_data(hid_t dataset_id, dataset_t *dataset) {
+int hdf5_read_data(hid_t dataset_id, dataset_t *dataset) {
 
 	// Allocate main buffer
 	// https://vorpus.org/blog/why-does-calloc-exist/
@@ -207,40 +220,45 @@ herr_t hdf5_read_data(hid_t dataset_id, dataset_t *dataset) {
 		// Free resources
 		free(dataset->data);
 		dataset->data = NULL;
-		return status;
+		return NOK;
 	}
 
-	return DATASET_OK;
+	return OK;
 }
 
-herr_t hdf5_write_attribute(hid_t dataset_id, const char *attribute,
+int hdf5_write_attribute(hid_t dataset_id, const char *attribute,
 		hid_t datatype, const void *value) {
 
 	hid_t attr_dataspace = H5Screate(H5S_SCALAR);
 	hid_t attr = H5Acreate2(dataset_id, attribute, datatype, attr_dataspace,
 	H5P_DEFAULT, H5P_DEFAULT);
+	if (attr < 0) {
+		fprintf(stderr, "Error cretaing attribute %s.\n", attribute);
+		return NOK;
+	}
 
 	// Write the attribute to the dataset
 	herr_t status = H5Awrite(attr, datatype, value);
 	if (status < 0) {
 		fprintf(stderr, "Error writing attribute %s.\n", attribute);
-		return status;
+		return NOK;
 	}
 
 	// Close the attribute.
 	status = H5Aclose(attr);
 	if (status < 0) {
 		fprintf(stderr, "Error closing attribute %s.\n", attribute);
-		return status;
+		return NOK;
 	}
 
 	// Close the dataspace.
 	status = H5Sclose(attr_dataspace);
 	if (status < 0) {
 		fprintf(stderr, "Error closing attribute %s datatspace.\n", attribute);
+		return NOK;
 	}
 
-	return status;
+	return OK;
 }
 
 int hdf5_get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions) {
