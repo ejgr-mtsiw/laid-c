@@ -24,20 +24,46 @@ void init_dataset(dataset_t *dataset) {
 	dataset->n_longs = 0;
 }
 
-/**
- * Returns the class of this data line
- */
 unsigned int get_class(const unsigned long *line,
-		const unsigned int n_attributes, const unsigned int n_longs,
+		const unsigned int n_attributes, const unsigned int n_words,
 		const unsigned int n_bits_for_class) {
 
-	// Check how many attributes remain on last long
-	unsigned char remaining_attributes = n_attributes % BLOCK_BITS;
+	// How many words for attributes?
+	uint_fast32_t n_words_for_attributes = n_attributes / BLOCK_BITS
+			+ (n_attributes % BLOCK_BITS != 0);
 
+	// How many attributes remain on last word
+	uint_fast8_t remaining_attributes = n_attributes % BLOCK_BITS;
+
+	// Are all the class bits in this word?
+	if (n_words > n_words_for_attributes) {
+		// They're split between 2 words
+
+		// n bits on penultimate word
+		uint_fast8_t n_bits_p = BLOCK_BITS - remaining_attributes;
+
+		// n bits on last word
+		uint_fast8_t n_bits_l = n_bits_for_class - n_bits_p;
+
+		//bits on penultimate word
+		uint_fast32_t high_bits = (uint_fast32_t) get_bits(line[n_words - 2], 0,
+				n_bits_p);
+		//bits on last word
+		uint_fast32_t low_bits = (uint_fast32_t) get_bits(line[n_words - 1],
+		BLOCK_BITS - n_bits_l, n_bits_l);
+
+		// Merge bits
+		high_bits <<= n_bits_l;
+		high_bits |= low_bits;
+
+		return high_bits;
+	}
+
+	// All bits on same word
 	// Class starts here
-	unsigned char at = BLOCK_BITS - remaining_attributes - n_bits_for_class;
+	uint_fast8_t at = BLOCK_BITS - remaining_attributes - n_bits_for_class;
 
-	return (unsigned char) get_bits(line[n_longs - 1], at, n_bits_for_class);
+	return (uint_fast32_t) get_bits(line[n_words - 1], at, n_bits_for_class);
 }
 
 /**
