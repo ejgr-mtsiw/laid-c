@@ -80,7 +80,7 @@ uint32_t add_jnsqs(dataset_t *dataset) {
 	uint32_t n_observations = dataset->n_observations;
 
 	// Number of bits needed to store class
-	uint32_t n_bits_for_class = dataset->n_bits_for_class;
+	uint8_t n_bits_for_class = dataset->n_bits_for_class;
 
 	// Last line
 	word_t *last = GET_LAST_OBSERVATION(dataset->data, n_observations, n_words);
@@ -119,7 +119,7 @@ uint32_t add_jnsqs(dataset_t *dataset) {
 	// Update number of attributes to include the new JNSQs
 	if (max_inconsistency > 0) {
 		// How many bits are needed for jnsq attributes
-		uint32_t n_bits_for_jnsq = ceil(log2(max_inconsistency + 1));
+		uint8_t n_bits_for_jnsq = ceil(log2(max_inconsistency + 1));
 
 		dataset->n_attributes += n_bits_for_jnsq;
 		dataset->n_bits_for_jnsqs = n_bits_for_jnsq;

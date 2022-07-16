@@ -24,12 +24,11 @@ void init_dataset(dataset_t *dataset) {
 	dataset->n_words = 0;
 }
 
-uint32_t get_class(const word_t *line,
-		const uint32_t n_attributes, const uint32_t n_words,
-		const uint8_t n_bits_for_class) {
+uint32_t get_class(const word_t *line, const uint32_t n_attributes,
+		const uint32_t n_words, const uint8_t n_bits_for_class) {
 
 	// How many words for attributes?
-	uint32_t n_words_for_attributes = n_attributes / WORD_BITS
+	uint32_t n_words_for_attributes = (uint32_t) (n_attributes / WORD_BITS)
 			+ (n_attributes % WORD_BITS != 0);
 
 	// How many attributes remain on last word
@@ -61,7 +60,7 @@ uint32_t get_class(const word_t *line,
 
 	// All bits on same word
 	// Class starts here
-	uint8_t at = WORD_BITS - remaining_attributes - n_bits_for_class;
+	uint8_t at = (uint8_t) (WORD_BITS - remaining_attributes - n_bits_for_class);
 
 	return (uint32_t) get_bits(line[n_words - 1], at, n_bits_for_class);
 }
@@ -102,7 +101,7 @@ int compare_lines_extra(const void *a, const void *b, void *n_words) {
 bool has_same_attributes(const word_t *a, const word_t *b,
 		const uint32_t n_attributes, const uint32_t n_words) {
 
-	for (uint32_t i = 0; i < n_words- 1; i++) {
+	for (uint32_t i = 0; i < n_words - 1; i++) {
 		if (a[i] != b[i]) {
 			return false;
 		}
@@ -161,8 +160,8 @@ oknok_t fill_class_arrays(dataset_t *dataset) {
 	/**
 	 * Array that stores the number of observations for each class
 	 */
-	dataset->n_observations_per_class = (uint32_t*) calloc(
-			dataset->n_classes, sizeof(uint32_t));
+	dataset->n_observations_per_class = (uint32_t*) calloc(dataset->n_classes,
+			sizeof(uint32_t));
 	if (dataset->n_observations_per_class == NULL) {
 		fprintf(stderr, "Error allocating n_observations_per_class\n");
 		return NOK;
@@ -176,8 +175,7 @@ oknok_t fill_class_arrays(dataset_t *dataset) {
 	// WHATIF: If we reduce the number of possible columns and lines to
 	// 2^32-1 we could use half the memory by storing the line indexes
 	dataset->observations_per_class = (word_t**) calloc(
-			dataset->n_classes * dataset->n_observations,
-			sizeof(word_t*));
+			dataset->n_classes * dataset->n_observations, sizeof(word_t*));
 	if (dataset->observations_per_class == NULL) {
 		fprintf(stderr, "Error allocating observations_per_class\n");
 		return NOK;
@@ -199,7 +197,7 @@ oknok_t fill_class_arrays(dataset_t *dataset) {
 	uint32_t n_observations = dataset->n_observations;
 
 	// Number of bits needed to store class
-	uint32_t n_bits_for_class = dataset->n_bits_for_class;
+	uint8_t n_bits_for_class = dataset->n_bits_for_class;
 
 	// Observations per class
 	word_t **observations_per_class = dataset->observations_per_class;
