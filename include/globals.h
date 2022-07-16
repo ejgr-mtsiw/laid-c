@@ -12,12 +12,14 @@
 #include <stdint.h>
 
 //#define DEBUG 1
-typedef int8_t oknok_t; // Is OK or NOK
-#define NOK -1
-#define OK 1
 
 //#ifdef DEBUG
 #include <time.h>
+
+#ifndef CLOCK_MONOTONIC_RAW
+#define CLOCK_MONOTONIC_RAW CLOCK_MONOTONIC
+#endif
+
 #define SETUP_TIMING struct timespec tick, tock;
 #define TICK clock_gettime(CLOCK_MONOTONIC_RAW, &tick);
 #define TOCK(stream) clock_gettime(CLOCK_MONOTONIC_RAW, &tock); fprintf(stream, "[%0.3fs]\n", (tock.tv_nsec - tick.tv_nsec) / 1000000000.0F + (tock.tv_sec  - tick.tv_sec));
@@ -27,6 +29,10 @@ typedef int8_t oknok_t; // Is OK or NOK
 //#define TOCK
 //#endif
 
+typedef int8_t oknok_t; // Is OK or NOK
+#define NOK -1
+#define OK 1
+
 #define NOT_BLACKLISTED false
 #define BLACKLISTED true
 
@@ -34,13 +40,18 @@ typedef int8_t oknok_t; // Is OK or NOK
  * The name of the dataset that will store the disjoint matrix
  * with attributes as lines
  */
-#define DM_DATASET_ATTRIBUTES_LINE "DMX_LINE"
+#define DM_DATASET_COLUMN_DATA "DMX/COLUMN_DATA"
 
 /**
  * The name of the dataset that will store the disjoint matrix
  * with attributes as columns
  */
-#define DM_DATASET_ATTRIBUTES_COLUMN "DMX_COLUMN"
+#define DM_DATASET_LINE_DATA "DMX/LINE_DATA"
+
+/**
+ * The name of the dataset that will store the totals for each line
+ */
+#define DM_DATASET_LINE_TOTALS "DMX/LINE_TOTALS"
 
 /**
  * Attribute for number of classes
