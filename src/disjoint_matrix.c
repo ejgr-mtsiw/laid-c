@@ -59,11 +59,11 @@ oknok_t create_disjoint_matrix(const char *filename, const dataset_t *dataset) {
 oknok_t create_disjoint_matrix_datasets(const hid_t file_id,
 		const dataset_t *dataset) {
 
-	if (create_attribute_column_dataset(file_id, dataset) != OK) {
-		return NOK;
-	}
+//	if (create_attribute_line_dataset(file_id, dataset) != OK) {
+//		return NOK;
+//	}
 
-	return create_attribute_line_dataset(file_id, dataset);
+	return create_attribute_column_dataset(file_id, dataset);
 }
 
 oknok_t create_attribute_column_dataset(const hid_t file_id,
