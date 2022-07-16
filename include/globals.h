@@ -9,8 +9,10 @@
 #ifndef GLOBALS_H__
 #define GLOBALS_H__
 
-//#define DEBUG 1
+#include <stdint.h>
 
+//#define DEBUG 1
+typedef uint8_t oknok_t; // Is OK or NOK
 #define NOK -1
 #define OK 1
 

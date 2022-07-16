@@ -23,32 +23,32 @@ typedef struct cover_t {
 	/**
 	 * Number of attributes
 	 */
-	unsigned int n_attributes;
+	uint32_t n_attributes;
 
 	/**
-	 * Number of longs (64bits) needed to store a line
+	 * Number of words needed to store a line
 	 */
-	unsigned int n_longs;
+	uint32_t n_words;
 
 	/**
 	 * Number of lines of the disjoint matrix
 	 */
-	unsigned long matrix_n_lines;
+	uint32_t matrix_n_lines;
 
 	/**
 	 * Array of bllacklisted lines
 	 */
-	unsigned char *line_blacklist;
+	uint8_t *line_blacklist;
 
 	/**
 	 * Array of blacklisted attributes
 	 */
-	unsigned char *attribute_blacklist;
+	uint8_t *attribute_blacklist;
 
 	/**
 	 * Array with the current totals for all attributes
 	 */
-	unsigned int *sum;
+	uint32_t *sum;
 
 } cover_t;
 
@@ -56,7 +56,7 @@ typedef struct cover_t {
  * Applies the set cover algorithm to the hdf5 dataset and prints
  * the minimum attribute set that covers all the lines
  */
-int calculate_solution(const char *filename, const char *datasetname,
+oknok_t calculate_solution(const char *filename, const char *datasetname,
 		cover_t *cover);
 
 /**
@@ -65,17 +65,13 @@ int calculate_solution(const char *filename, const char *datasetname,
  */
 herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 		const hid_t memory_space_id, const cover_t *cover,
-		const unsigned int attribute_to_blacklist);
+		const uint32_t attribute_to_blacklist);
 
 /**
  * Calculates the initial totals for all attributes
  */
-unsigned int calculate_initial_sum(const hid_t dataset_id,
-		const hid_t dataset_space_id, const hid_t memory_space_id,
-		const cover_t *cover);
-
-//void update_sum(const unsigned long *buffer,
-//		const unsigned char *attribute_blacklist);
+void calculate_initial_sum(const hid_t dataset_id, const hid_t dataset_space_id,
+		const hid_t memory_space_id, const cover_t *cover);
 
 /**
  * Prints the attributes that are part of the solution

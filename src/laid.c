@@ -80,8 +80,8 @@ int main(int argc, char **argv) {
 		// We need to know the number of longs in each line of the dataset so
 		// we can't use the standard qsort implementation
 		sort_r(dataset.data, dataset.n_observations,
-				dataset.n_longs * sizeof(unsigned long), compare_lines_extra,
-				&dataset.n_longs);
+				dataset.n_words * sizeof(word_t), compare_lines_extra,
+				&dataset.n_words);
 
 		fprintf(stdout, "\nSorted dataset ");
 		TOCK(stdout)

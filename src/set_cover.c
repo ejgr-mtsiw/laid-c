@@ -12,10 +12,10 @@
  * Applies the set cover algorithm to the hdf5 dataset and prints
  * the minimum attribute set that covers all the lines
  */
-int calculate_solution(const char *filename, const char *datasetname,
+oknok_t calculate_solution(const char *filename, const char *datasetname,
 		cover_t *cover) {
 
-	int ret = OK;
+	oknok_t ret = OK;
 
 	hid_t file_id, dataset_id;
 
@@ -38,24 +38,24 @@ int calculate_solution(const char *filename, const char *datasetname,
 	}
 
 	// Get number of lines of disjoint matrix
-	unsigned long n_lines = dm_dimensions[0];
+	uint32_t n_lines = dm_dimensions[0];
 
 	// Number of longs in a line
-	unsigned int n_longs = dm_dimensions[1];
+	uint32_t n_words = dm_dimensions[1];
 
 	// Number of attributes
-	unsigned int n_attributes = 0;
+	uint32_t n_attributes = 0;
 	hdf5_read_attribute(dataset_id, HDF5_N_ATTRIBUTES_ATTRIBUTE,
 	H5T_NATIVE_UINT, &n_attributes);
 
 	// The choice of the chunk size affects performance!
 	// for now we will choose one line
-	hsize_t dm_chunk_dimensions[2] = { 1, n_longs };
+	hsize_t dm_chunk_dimensions[2] = { 1, n_words };
 
 	// Create a memory dataspace to indicate the size of our buffer/chunk
 	hid_t dm_memory_space_id = H5Screate_simple(2, dm_chunk_dimensions, NULL);
 
-	cover->n_longs = n_longs;
+	cover->n_words = n_words;
 	cover->matrix_n_lines = n_lines;
 	cover->n_attributes = n_attributes;
 
@@ -65,7 +65,7 @@ int calculate_solution(const char *filename, const char *datasetname,
 	 * Also works as solution. Every attribute that's part of the
 	 * solution is ignored in the next round of calculating totals
 	 */
-	cover->attribute_blacklist = calloc(n_attributes, sizeof(unsigned char));
+	cover->attribute_blacklist = calloc(n_attributes, sizeof(uint8_t));
 	if (cover->attribute_blacklist == NULL) {
 		fprintf(stderr, "Error allocating attribute blacklist array\n");
 
@@ -76,7 +76,7 @@ int calculate_solution(const char *filename, const char *datasetname,
 	/**
 	 * Allocate blacklisted lines array
 	 */
-	cover->line_blacklist = calloc(n_lines, sizeof(unsigned char));
+	cover->line_blacklist = calloc(n_lines, sizeof(uint8_t));
 	if (cover->line_blacklist == NULL) {
 		fprintf(stderr, "Error allocating line blacklist array\n");
 
@@ -87,7 +87,7 @@ int calculate_solution(const char *filename, const char *datasetname,
 	/**
 	 * Array to store the total number of '1's for each atribute
 	 */
-	cover->sum = calloc(n_attributes, sizeof(unsigned int));
+	cover->sum = calloc(n_attributes, sizeof(uint32_t));
 	if (cover->sum == NULL) {
 		fprintf(stderr, "Error allocating sum array\n");
 
@@ -99,11 +99,11 @@ int calculate_solution(const char *filename, const char *datasetname,
 	calculate_initial_sum(dataset_id, dm_dataset_space_id, dm_memory_space_id,
 			cover);
 
-	unsigned int max_total = 0;
-	unsigned int attribute_to_blacklist = 0;
-	unsigned int *sum = cover->sum;
+	uint32_t max_total = 0;
+	uint32_t attribute_to_blacklist = 0;
+	uint32_t *sum = cover->sum;
 
-	unsigned int round = 1;
+	uint32_t round = 1;
 
 	do {
 
@@ -111,7 +111,7 @@ int calculate_solution(const char *filename, const char *datasetname,
 		max_total = sum[0];
 		attribute_to_blacklist = 0;
 
-		for (unsigned int i = 1; i < n_attributes; i++) {
+		for (uint32_t i = 1; i < n_attributes; i++) {
 			if (sum[i] > max_total) {
 				max_total = sum[i];
 				attribute_to_blacklist = i;
@@ -155,48 +155,47 @@ out_close_dataset:
 
 herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 		const hid_t memory_space_id, const cover_t *cover,
-		const unsigned int attribute_to_blacklist) {
+		const uint32_t attribute_to_blacklist) {
 
 	SETUP_TIMING
 	TICK
 
 	// Attribute to blacklist is in long n
-	unsigned int n = attribute_to_blacklist / BLOCK_BITS;
+	uint32_t n = attribute_to_blacklist / WORD_BITS;
 
 	// Attribute to blacklist is at
-	unsigned char bit = BLOCK_BITS - 1 - attribute_to_blacklist % BLOCK_BITS;
+	uint8_t bit = WORD_BITS - 1 - attribute_to_blacklist % WORD_BITS;
 
 	// Number of longs in a line
-	unsigned int n_longs = cover->n_longs;
+	uint32_t n_words = cover->n_words;
 
 	// Number of attributes
-	unsigned int n_attributes = cover->n_attributes;
+	uint32_t n_attributes = cover->n_attributes;
 
 	// Calculate number of lines of disjoint matrix
-	unsigned long n_lines = cover->matrix_n_lines;
+	uint32_t n_lines = cover->matrix_n_lines;
 
-	unsigned char *line_blacklist = cover->line_blacklist;
+	uint8_t *line_blacklist = cover->line_blacklist;
 
-	unsigned int *sum = cover->sum;
+	uint32_t *sum = cover->sum;
 
 	// Alocate buffer
-	unsigned long *buffer = (unsigned long*) malloc(
-			sizeof(unsigned long) * n_longs);
+	word_t *buffer = (word_t*) malloc(sizeof(word_t) * n_words);
 
 	// We will read one line at a time
 	hsize_t offset[2] = { 0, 0 };
-	hsize_t count[2] = { 1, n_longs };
+	hsize_t count[2] = { 1, n_words };
 
 	// Current long
-	unsigned long c_long = 0;
+	word_t c_long = 0;
 
 	// Current attribute
-	unsigned long c_attribute = 0;
+	uint32_t c_attribute = 0;
 
-	const unsigned int n_lines_to_blacklist = sum[attribute_to_blacklist];
-	unsigned int next_output = 0;
+	const uint32_t n_lines_to_blacklist = sum[attribute_to_blacklist];
+	uint32_t next_output = 0;
 
-	for (unsigned int i = 0; i < n_lines; i++) {
+	for (uint32_t i = 0; i < n_lines; i++) {
 
 		if (line_blacklist[i] != BLACKLISTED) {
 
@@ -218,12 +217,12 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 				line_blacklist[i] = BLACKLISTED;
 
 				// Update sum removing the contribution from this line
-				for (unsigned int l = 0; l < n_longs; l++) {
+				for (uint32_t l = 0; l < n_words; l++) {
 
 					c_long = buffer[l];
-					c_attribute = l * BLOCK_BITS;
+					c_attribute = l * WORD_BITS;
 
-					for (int bit = BLOCK_BITS - 1;
+					for (int bit = WORD_BITS - 1;
 							c_attribute < n_attributes && bit >= 0;
 							bit--, c_attribute++) {
 
@@ -254,39 +253,37 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 /**
  * Finds the next attribute to blacklist
  */
-unsigned int calculate_initial_sum(const hid_t dataset_id,
-		const hid_t dataset_space_id, const hid_t memory_space_id,
-		const cover_t *cover) {
+void calculate_initial_sum(const hid_t dataset_id, const hid_t dataset_space_id,
+		const hid_t memory_space_id, const cover_t *cover) {
 
 	SETUP_TIMING
 	TICK
 
-	unsigned int n_longs = cover->n_longs;
+	uint32_t n_words = cover->n_words;
 
 	unsigned long n_lines = cover->matrix_n_lines;
 
-	unsigned int n_attributes = cover->n_attributes;
+	uint32_t n_attributes = cover->n_attributes;
 
-	unsigned int *sum = cover->sum;
+	uint32_t *sum = cover->sum;
 
 	// Alocate buffer
-	unsigned long *buffer = (unsigned long*) malloc(
-			sizeof(unsigned long) * n_longs);
+	word_t *buffer = (word_t*) malloc(sizeof(word_t) * n_words);
 
 	// We will read one line at a time
 	hsize_t offset[2] = { 0, 0 };
-	hsize_t count[2] = { 1, n_longs };
+	hsize_t count[2] = { 1, n_words };
 
 	// Current long
-	unsigned long c_long = 0;
+	word_t c_long = 0;
 
 	// Current attribute
-	unsigned int c_attribute = 0;
+	uint32_t c_attribute = 0;
 
-	unsigned int next_output = 0;
+	uint32_t next_output = 0;
 
 	// Calculate totals
-	for (unsigned int i = 0; i < n_lines; i++) {
+	for (uint32_t i = 0; i < n_lines; i++) {
 
 		// Update offset
 		offset[0] = i;
@@ -299,11 +296,11 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 		H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id, dataset_space_id,
 		H5P_DEFAULT, buffer);
 
-		for (unsigned int l = 0; l < n_longs; l++) {
+		for (uint32_t l = 0; l < n_words; l++) {
 			c_long = buffer[l];
-			c_attribute = l * BLOCK_BITS;
+			c_attribute = l * WORD_BITS;
 
-			for (int bit = BLOCK_BITS - 1;
+			for (int bit = WORD_BITS - 1;
 					bit >= 0 && c_attribute < n_attributes;
 					bit--, c_attribute++) {
 
@@ -326,33 +323,12 @@ unsigned int calculate_initial_sum(const hid_t dataset_id,
 	TOCK(stdout)
 
 	free(buffer);
-
-	return 0;
 }
-//
-//void update_sum(const unsigned long *buffer,
-//		const unsigned char *attribute_blacklist, unsigned int *sum) {
-//
-//	// Current attribute
-//	unsigned int c = 0;
-//
-//	for (unsigned int n = 0; n < g_n_longs; n++) {
-//		for (char bit = BLOCK_BITS - 1; c < g_n_attributes && bit >= 0;
-//				bit--, c++) {
-//
-//			if (attribute_blacklist[c] == NOT_BLACKLISTED
-//					&& (buffer[n] & AND_MASK_TABLE[bit])) {
-//				// Add to sum
-//				sum[c]++;
-//			}
-//		}
-//	}
-//}
 
 void print_solution(FILE *stream, cover_t *cover) {
 
 	fprintf(stream, "\nSolution: { ");
-	for (unsigned int i = 0; i < cover->n_attributes; i++) {
+	for (uint32_t i = 0; i < cover->n_attributes; i++) {
 		if (cover->attribute_blacklist[i] == BLACKLISTED) {
 			// This attribute is set so it's part of the solution
 			fprintf(stream, "%d ", i);
