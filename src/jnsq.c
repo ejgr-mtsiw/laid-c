@@ -50,7 +50,7 @@ void update_jnsq(word_t *to_update, const word_t *to_compare,
 	set_jnsq_bits(to_update, (*inconsistency), n_attributes, n_words,
 			n_bits_for_class);
 
-	if (has_same_attributes(to_update, to_compare, n_attributes, n_words)) {
+	if (has_same_attributes(to_update, to_compare, n_attributes)) {
 		// Inconsistency!
 		(*inconsistency)++; //Because observations are sorted by class
 	} else {
@@ -98,7 +98,7 @@ uint32_t add_jnsqs(dataset_t *dataset) {
 	for (prev = dataset->data; prev < last; NEXT_LINE(prev, n_words)) {
 		NEXT_LINE(current, n_words);
 
-		if (has_same_attributes(current, prev, n_attributes, n_words)) {
+		if (has_same_attributes(current, prev, n_attributes)) {
 			// Inconsistency!
 			inconsistency++; //Because observations are sorted by class
 

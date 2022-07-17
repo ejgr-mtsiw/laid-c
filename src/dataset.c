@@ -99,30 +99,33 @@ int compare_lines_extra(const void *a, const void *b, void *n_words) {
  * Checks if the lines have the same attributes
  */
 bool has_same_attributes(const word_t *a, const word_t *b,
-		const uint32_t n_attributes, const uint32_t n_words) {
+		const uint32_t n_attributes) {
 
-	for (uint32_t i = 0; i < n_words - 1; i++) {
+	// How many words for attributes?
+	uint32_t n_words = (uint32_t) (n_attributes / WORD_BITS)
+			+ (n_attributes % WORD_BITS != 0);
+
+	// How many attributes remain on last word
+	uint8_t remaining_attributes = n_attributes % WORD_BITS;
+
+	// Check full words
+	for (uint32_t i = 0; i < n_words - !!remaining_attributes; i++) {
 		if (a[i] != b[i]) {
 			return false;
 		}
 	}
-
-	uint32_t remaining_attributes = n_attributes % WORD_BITS;
 
 	if (remaining_attributes == 0) {
 		// Nothing more to check
 		return true;
 	}
 
-	word_t mask = ~0LU;
+	// We need to check last word
+	word_t mask = ~0UL;
 	mask >>= remaining_attributes;
 	mask = ~mask;
 
-	if ((a[n_words - 1] & mask) != (b[n_words - 1] & mask)) {
-		return false;
-	}
-
-	return true;
+	return !(mask & (a[n_words - 1] ^ b[n_words - 1]));
 }
 
 uint32_t remove_duplicates(dataset_t *dataset) {

@@ -106,7 +106,7 @@ int compare_lines_extra(const void *a, const void *b, void *n_words);
  * Checks if the lines have the same attributes
  */
 bool has_same_attributes(const word_t *a, const word_t *b,
-		const uint32_t n_attributes, const uint32_t n_words);
+		const uint32_t n_attributes);
 
 /**
  * Removes duplicated lines from the dataset.
