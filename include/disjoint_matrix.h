@@ -20,8 +20,7 @@
 /**
  * Calculates the number of lines for the disjoint matrix
  */
-uint32_t calculate_number_of_lines_of_disjoint_matrix(
-		const dataset_t *dataset);
+uint32_t calculate_number_of_lines_of_disjoint_matrix(const dataset_t *dataset);
 
 /**
  * Checks if the disjoint matrix datasets are already present in the hdf5 file
@@ -44,14 +43,12 @@ oknok_t create_disjoint_matrix_datasets(const hid_t file_id,
 /**
  * Creates the dataset containing the disjoint matrix with attributes as columns
  */
-oknok_t create_attribute_column_dataset(const hid_t file_id,
-		const dataset_t *dataset);
+oknok_t create_line_dataset(const hid_t file_id, const dataset_t *dataset);
 
 /**
  * Creates the dataset containing the disjoint matrix with attributes as lines
  */
-oknok_t create_attribute_line_dataset(const hid_t file_id,
-		const dataset_t *dataset);
+oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset);
 
 /**
  * Writes the matrix atributes in the dataset
@@ -63,5 +60,11 @@ herr_t save_attribute_data(const hid_t dm_dataset_id,
 		const hid_t dm_dataset_space_id, const hid_t dm_memory_space_id,
 		hsize_t *offset, const hsize_t *count, const word_t *data,
 		const uint32_t n_lines, const uint8_t n_attributes);
+
+/**
+ * Writes the line totals metadata to the dataset
+ */
+herr_t write_line_totals_data(const hid_t file_id, const uint32_t *data,
+		const uint32_t n_lines);
 
 #endif

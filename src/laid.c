@@ -150,14 +150,14 @@ int main(int argc, char **argv) {
 
 	TICK
 	fprintf(stdout, "\nApplying set covering algorithm.\n");
-	if (calculate_solution(args.filename, DM_DATASET_ATTRIBUTES_COLUMN,
-			&cover) != OK) {
+	if (calculate_solution(args.filename, &cover) != OK) {
 		return EXIT_FAILURE;
 	}
 
 	print_solution(stdout, &cover);
 
 	free_cover(&cover);
+	TOCK(stdout)
 
 	fprintf(stdout, "All done! ");
 

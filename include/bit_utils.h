@@ -52,13 +52,17 @@ static const word_t AND_MASK_TABLE[64] = { 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40,
  * operations), I developed the following function (C++)
  * https://stackoverflow.com/questions/1283221/algorithm-for-copying-n-bits-at-arbitrary-position-from-one-int-to-another
  */
-word_t set_bits(const word_t destination, const word_t source,
-		const uint8_t at, const uint8_t numbits);
+word_t set_bits(const word_t destination, const word_t source, const uint8_t at,
+		const uint8_t numbits);
 
 /**
  * Return numbits from source starting at at
  */
-word_t get_bits(const word_t source, const uint8_t at,
-		const uint8_t numbits);
+word_t get_bits(const word_t source, const uint8_t at, const uint8_t numbits);
+
+/**
+ * Transposes a 64x64 bit matrix
+ */
+void transpose64(uint64_t a[64]);
 
 #endif

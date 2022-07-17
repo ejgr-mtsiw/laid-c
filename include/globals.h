@@ -40,18 +40,18 @@ typedef int8_t oknok_t; // Is OK or NOK
  * The name of the dataset that will store the disjoint matrix
  * with attributes as lines
  */
-#define DM_DATASET_COLUMN_DATA "DMX/COLUMN_DATA"
+#define DM_DATASET_COLUMN_DATA "/COLUMN_DATA"
 
 /**
  * The name of the dataset that will store the disjoint matrix
  * with attributes as columns
  */
-#define DM_DATASET_LINE_DATA "DMX/LINE_DATA"
+#define DM_DATASET_LINE_DATA "/LINE_DATA"
 
 /**
  * The name of the dataset that will store the totals for each line
  */
-#define DM_DATASET_LINE_TOTALS "DMX/LINE_TOTALS"
+#define DM_DATASET_LINE_TOTALS "/LINE_TOTALS"
 
 /**
  * Attribute for number of classes

@@ -56,8 +56,7 @@ typedef struct cover_t {
  * Applies the set cover algorithm to the hdf5 dataset and prints
  * the minimum attribute set that covers all the lines
  */
-oknok_t calculate_solution(const char *filename, const char *datasetname,
-		cover_t *cover);
+oknok_t calculate_solution(const char *filename, cover_t *cover);
 
 /**
  * Reads the disjoint matrix dataset and blacklists the lines that

@@ -27,9 +27,7 @@ uint32_t calculate_number_of_lines_of_disjoint_matrix(const dataset_t *dataset) 
 
 bool is_matrix_created(const char *filename) {
 
-	return hdf5_dataset_exists_in_file(filename,
-	DM_DATASET_ATTRIBUTES_COLUMN) && hdf5_dataset_exists_in_file(filename,
-	DM_DATASET_ATTRIBUTES_LINE);
+	return hdf5_dataset_exists_in_file(filename, DM_DATASET_LINE_DATA);
 }
 
 oknok_t create_disjoint_matrix(const char *filename, const dataset_t *dataset) {
@@ -58,16 +56,22 @@ oknok_t create_disjoint_matrix(const char *filename, const dataset_t *dataset) {
 
 oknok_t create_disjoint_matrix_datasets(const hid_t file_id,
 		const dataset_t *dataset) {
+	SETUP_TIMING
+	TICK
+	if (create_line_dataset(file_id, dataset) != OK) {
+		return NOK;
+	}
+	fprintf(stdout, "\n");
+	TOCK(stdout)
 
-//	if (create_attribute_line_dataset(file_id, dataset) != OK) {
-//		return NOK;
-//	}
-
-	return create_attribute_column_dataset(file_id, dataset);
+	TICK
+	oknok_t r = create_column_dataset(file_id, dataset);
+	fprintf(stdout, "\n");
+	TOCK(stdout)
+	return r;
 }
 
-oknok_t create_attribute_column_dataset(const hid_t file_id,
-		const dataset_t *dataset) {
+oknok_t create_line_dataset(const hid_t file_id, const dataset_t *dataset) {
 
 	// Number of longs in a line
 	uint32_t n_words = dataset->n_words;
@@ -100,16 +104,16 @@ oknok_t create_attribute_column_dataset(const hid_t file_id,
 
 	// Create a dataset creation property list
 	hid_t dm_property_list_id = H5Pcreate(H5P_DATASET_CREATE);
-	H5Pset_layout(dm_property_list_id, H5D_CHUNKED);
+	//H5Pset_layout(dm_property_list_id, H5D_CHUNKED);
 
 	// The choice of the chunk size affects performance!
 	// for now we will choose one line
-	hsize_t dm_chunk_dimensions[2] = { 1, n_words };
+	//hsize_t dm_chunk_dimensions[2] = { 1, n_words };
 
-	H5Pset_chunk(dm_property_list_id, 2, dm_chunk_dimensions);
+	//H5Pset_chunk(dm_property_list_id, 2, dm_chunk_dimensions);
 
 	// Create the dataset
-	hid_t dm_dataset_id = H5Dcreate2(file_id, DM_DATASET_ATTRIBUTES_COLUMN,
+	hid_t dm_dataset_id = H5Dcreate2(file_id, DM_DATASET_LINE_DATA,
 	H5T_STD_U64LE, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
 	H5P_DEFAULT);
 	if (dm_dataset_id < 0) {
@@ -128,7 +132,7 @@ oknok_t create_attribute_column_dataset(const hid_t file_id,
 	}
 
 	// Close resources
-	H5Pclose(dm_property_list_id);
+	//H5Pclose(dm_property_list_id);
 
 	hsize_t mem_dimensions[2] = { 1, n_words };
 	// Create a memory dataspace to indicate the size of our buffer/chunk
@@ -139,8 +143,11 @@ oknok_t create_attribute_column_dataset(const hid_t file_id,
 		goto out_memory_space;
 	}
 
-	// Alocate buffer
+	// Allocate buffer
 	word_t *buffer = (word_t*) malloc(sizeof(word_t) * n_words);
+
+	// Allocate line totals buffer
+	uint32_t *lt_buffer = (uint32_t*) calloc(n_lines, sizeof(uint32_t));
 
 	// We will write one line at a time
 	hsize_t count[2] = { 1, n_words };
@@ -148,6 +155,9 @@ oknok_t create_attribute_column_dataset(const hid_t file_id,
 
 	// Used to print out progress message
 	uint32_t next_output = 0;
+
+	// Current output line
+	uint32_t c_line = 0;
 
 	// Current line
 	for (uint32_t i = 0; i < n_classes - 1; i++) {
@@ -157,32 +167,30 @@ oknok_t create_attribute_column_dataset(const hid_t file_id,
 					n_i++) {
 				for (uint32_t n_j = j * n_observations;
 						n_j < j * n_observations + n_observations_per_class[j];
-						n_j++) {
+						n_j++, c_line++) {
 					for (uint32_t n = 0; n < n_words; n++) {
 						buffer[n] = observations_per_class[n_i][n]
 								^ observations_per_class[n_j][n];
+
+						lt_buffer[c_line] += __builtin_popcountl(buffer[n]);
 					}
+
+					// Update offset
+					offset[0] = c_line;
 
 					// Select hyperslab on file dataset
 					H5Sselect_hyperslab(dm_dataset_space_id, H5S_SELECT_SET,
 							offset, NULL, count, NULL);
 
 					// Write buffer to dataset
-					herr_t err = H5Dwrite(dm_dataset_id, H5T_NATIVE_ULONG,
+					H5Dwrite(dm_dataset_id, H5T_NATIVE_ULONG,
 							dm_memory_space_id, dm_dataset_space_id,
 							H5P_DEFAULT, buffer);
 
-					if (err < 0) {
-						goto out_free_buffer;
-					}
-
-					// Update offset
-					offset[0]++;
-
-					if (offset[0] > next_output) {
+					if (c_line > next_output) {
 						fprintf(stdout,
 								" - Writing disjoint matrix [1/2]: %0.0f%%  \r",
-								((double) offset[0]) / n_lines * 100);
+								((double) c_line) / n_lines * 100);
 						fflush( stdout);
 
 						next_output += n_lines / 10;
@@ -192,23 +200,29 @@ oknok_t create_attribute_column_dataset(const hid_t file_id,
 		}
 	}
 
-out_free_buffer:
+	// Create line totals dataset
+	herr_t err = write_line_totals_data(file_id, lt_buffer, n_lines);
+	if (err < 0) {
+		fprintf(stderr, "Error creating line totals dataset space\n");
+		ret = NOK;
+	}
+
+	free(lt_buffer);
 	free(buffer);
 
 out_memory_space:
 	H5Sclose(dm_memory_space_id);
 
-out_dataset_space:
-	H5Sclose(dm_dataset_space_id);
-
 out_dataset:
 	H5Dclose(dm_dataset_id);
+
+out_dataset_space:
+	H5Sclose(dm_dataset_space_id);
 
 	return ret;
 }
 
-oknok_t create_attribute_line_dataset(const hid_t file_id,
-		const dataset_t *dataset) {
+oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 
 	// Number of attributes
 	uint32_t n_attributes = dataset->n_attributes;
@@ -225,79 +239,93 @@ oknok_t create_attribute_line_dataset(const hid_t file_id,
 	// Number of observations per class
 	uint32_t *n_observations_per_class = dataset->n_observations_per_class;
 
-	uint32_t n_lines = calculate_number_of_lines_of_disjoint_matrix(dataset);
+	// Number of words in a line FROM INPUT DATASET
+	uint32_t in_n_words = n_attributes / WORD_BITS
+			+ (n_attributes % WORD_BITS != 0);
 
-	// Number of words in a line
-	uint32_t n_words_line = n_lines / WORD_BITS + (n_lines % WORD_BITS != 0);
+	// Number of lines from input dataset
+	uint32_t in_n_lines = calculate_number_of_lines_of_disjoint_matrix(dataset);
+
+	// Number of words in a line FROM OUTPUT DATASET
+	uint32_t out_n_words = in_n_lines / WORD_BITS
+			+ (in_n_lines % WORD_BITS != 0);
+
+	// Number of lines on output dataset
+	//uint32_t out_n_lines = n_attributes;
+
+	// Round to nearest 64 so we don't have to worry when transposing
+	uint32_t out_n_lines = in_n_words * WORD_BITS;
 
 	oknok_t ret = OK;
 
-	// Dataset dimensions
-	hsize_t dm_dimensions[2] = { n_attributes, n_words_line };
+	// CREATE OUTPUT DATASET
+	// Output dataset dimensions
+	hsize_t out_dimensions[2] = { out_n_lines, out_n_words };
 
-	hid_t dm_dataset_space_id = H5Screate_simple(2, dm_dimensions, NULL);
-	if (dm_dataset_space_id < 0) {
+	hid_t out_dataspace_id = H5Screate_simple(2, out_dimensions, NULL);
+	if (out_dataspace_id < 0) {
 		// Error creating file
 		fprintf(stderr, "Error creating dataset space\n");
-		return NOK;
+		ret = NOK;
+		goto out_in_memspace;
 	}
 
 	// Create a dataset creation property list
-	hid_t dm_property_list_id = H5Pcreate(H5P_DATASET_CREATE);
-	H5Pset_layout(dm_property_list_id, H5D_CHUNKED);
+	hid_t out_property_list_id = H5Pcreate(H5P_DATASET_CREATE);
+	//H5Pset_layout(out_property_list_id, H5D_CHUNKED);
 
 	// The choice of the chunk size affects performance!
 	// for now we will choose one line
-	hsize_t dm_chunk_dimensions[2] = { 1, n_words_line };
+	//hsize_t out_chunk_dimensions[2] = { 1, out_n_words };
 
-	H5Pset_chunk(dm_property_list_id, 2, dm_chunk_dimensions);
+	//H5Pset_chunk(out_property_list_id, 2, out_chunk_dimensions);
 
 	// Create the dataset
-	hid_t dm_dataset_id = H5Dcreate2(file_id, DM_DATASET_ATTRIBUTES_LINE,
-	H5T_STD_U64LE, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
+	hid_t out_dataset_id = H5Dcreate2(file_id, DM_DATASET_COLUMN_DATA,
+	H5T_STD_U64LE, out_dataspace_id, H5P_DEFAULT, out_property_list_id,
 	H5P_DEFAULT);
-	if (dm_dataset_id < 0) {
-		fprintf(stderr, "Error creating disjoint matrix dataset\n");
+	if (out_dataset_id < 0) {
+		fprintf(stderr, "Error creating output dataset\n");
 		ret = NOK;
-		goto out_dataset_space;
-	}
-
-	// Save attributes
-	if (write_disjoint_matrix_attributes(dm_dataset_id, n_attributes, n_lines)
-			< 0) {
-
-		fprintf(stderr, "Error saving matrix atributes");
-		ret = NOK;
-		goto out_dataset;
+		goto out_out_dataspace;
 	}
 
 	// Close resources
-	H5Pclose(dm_property_list_id);
+	//H5Pclose(out_property_list_id);
 
-	hsize_t mem_dimensions[2] = { 1, n_words_line };
+	// We're writing 64 lines at once
+	hsize_t out_mem_dimensions[2] = { WORD_BITS, out_n_words };
+
 	// Create a memory dataspace to indicate the size of our buffer/chunk
-	hid_t dm_memory_space_id = H5Screate_simple(2, mem_dimensions, NULL);
-	if (dm_memory_space_id < 0) {
+	hid_t out_memspace_id = H5Screate_simple(2, out_mem_dimensions, NULL);
+	if (out_memspace_id < 0) {
 		fprintf(stderr, "Error creating disjoint matrix memory space\n");
 		ret = NOK;
-		goto out_memory_space;
+		goto out_out_memspace;
 	}
 
-	// Alocate buffer
-	word_t *buffer = (word_t*) malloc(sizeof(word_t) * n_lines);
+	// Allocate input buffer
+	//word_t *in_buffer = (word_t*) malloc(sizeof(word_t) * in_n_lines);
+	// Rounding to nearest multiple of 64 so we don't have to worry when
+	// transposing the last lines
+	word_t *in_buffer = (word_t*) malloc(
+			sizeof(word_t) * out_n_words * WORD_BITS);
 
-	// We will write one line at a time
-	hsize_t count[2] = { 1, n_words_line };
-	hsize_t offset[2] = { 0, 0 };
+	// Allocate output buffer
+	word_t *out_buffer = (word_t*) malloc(
+			sizeof(word_t) * out_n_words * WORD_BITS);
+
+	// Allocate transpose buffer
+	word_t t_buffer[WORD_BITS];
 
 	// Used to print out progress message
 	uint32_t next_output = 0;
 
-	// Current buffer position
-	word_t *current_buffer = buffer;
+	word_t *current_buffer = in_buffer;
 
-	for (uint32_t n = 0; n < dataset->n_words; n++) {
-		current_buffer = buffer;
+	for (uint32_t i = 0; i < in_n_words; i++) {
+
+		current_buffer = in_buffer;
 		for (uint32_t ci = 0; ci < n_classes - 1; ci++) {
 			for (uint32_t cj = ci + 1; cj < n_classes; cj++) {
 				for (uint32_t n_i = ci * n_observations;
@@ -309,49 +337,211 @@ oknok_t create_attribute_line_dataset(const hid_t file_id,
 											+ n_observations_per_class[cj];
 							n_j++, current_buffer++) {
 
-						*current_buffer = observations_per_class[n_i][n]
-								^ observations_per_class[n_j][n];
+						*current_buffer = observations_per_class[n_i][i]
+								^ observations_per_class[n_j][i];
 					}
 				}
 			}
 		}
 
-		// The array now has data for (up to) WORD_BITS attributes.
-		// We need to extract it and store it in the dataset
+		// TRANSPOSE LINES
+		for (uint32_t w = 0; w < out_n_words; w++) {
 
-		// Number of attributes actually computed. We are working in blocks of
-		// WORD_BITS bits, but the last block may be incomplete
-		// and only have < WORD_BITS attributes in it
-		uint8_t read_attributes = WORD_BITS;
-		if (n == dataset->n_words - 1) {
-			read_attributes = n_attributes - WORD_BITS * n;
+			// Read 64x64 bits block from input buffer
+			//! WARNING: We may have fewer than 64 lines remaining
+			// We may be reading garbage
+			memcpy(t_buffer, in_buffer + (w * WORD_BITS),
+					sizeof(word_t) * WORD_BITS);
+
+			// Transpose
+			transpose64(t_buffer);
+
+			// save to output buffer
+			//! WARNING: We may have fewer than 64 lines to save
+			// We may be writing garbage
+			for (uint8_t l = 0; l < WORD_BITS; l++) {
+				out_buffer[l * out_n_words + w] = t_buffer[l];
+			}
 		}
 
-		save_attribute_data(dm_dataset_id, dm_dataset_space_id,
-				dm_memory_space_id, offset, count, buffer, n_lines,
-				read_attributes);
+		// Lets try and save 64 full lines at once!
+		hsize_t out_offset[2] = { 0, 0 };
+		hsize_t out_count[2] = { WORD_BITS, out_n_words };
 
-		if (offset[0] > next_output) {
+		// SAVE TRANSPOSED ARRAY
+		out_offset[0] = i * WORD_BITS;
+		H5Sselect_hyperslab(out_dataspace_id, H5S_SELECT_SET, out_offset,
+		NULL, out_count, NULL);
+
+		H5Dwrite(out_dataset_id, H5T_NATIVE_ULONG, out_memspace_id,
+				out_dataspace_id, H5P_DEFAULT, out_buffer);
+
+//		// Lets try and save 1 full line at once!
+//		hsize_t out_offset[2] = { 0, 0 };
+//		hsize_t out_count[2] = { 1, out_n_words };
+//
+//		// SAVE TRANSPOSED ARRAY
+//		for (uint8_t l = 0; l < WORD_BITS; l++) {
+//			out_offset[0] = i * WORD_BITS + l;
+//			H5Sselect_hyperslab(out_dataspace_id, H5S_SELECT_SET, out_offset,
+//			NULL, out_count, NULL);
+//
+//			H5Dwrite(out_dataset_id, H5T_NATIVE_ULONG, out_memspace_id,
+//					out_dataspace_id, H5P_DEFAULT,
+//					out_buffer + out_n_words * l);
+//		}
+
+		if (i > next_output) {
 			fprintf(stdout, " - Writing disjoint matrix [2/2]: %0.0f%%      \r",
-					((double) offset[0]) / n_attributes * 100);
+					((double) i) / in_n_words * 100);
 			fflush( stdout);
 
-			next_output += n_attributes / 10;
+			next_output += in_n_words / 10;
 		}
 	}
 
-	free(buffer);
+	free(in_buffer);
+	free(out_buffer);
 
-out_memory_space:
-	H5Sclose(dm_memory_space_id);
+out_out_memspace:
+	H5Sclose(out_memspace_id);
 
-out_dataset_space:
-	H5Sclose(dm_dataset_space_id);
+	//out_out_dataset:
+	H5Dclose(out_dataset_id);
 
-out_dataset:
-	H5Dclose(dm_dataset_id);
+out_out_dataspace:
+	H5Sclose(out_dataspace_id);
+
+out_in_memspace:
+//	H5Sclose(in_memspace_id);
+//
+//	//out_in_dataset:
+//	H5Dclose(in_dataset_id);
+//
+//	H5Sclose(in_dataspace_id);
 
 	return ret;
+//
+//	// Dataset dimensions
+//	hsize_t dm_dimensions[2] = { n_attributes, n_words_line };
+//
+//	hid_t dm_dataset_space_id = H5Screate_simple(2, dm_dimensions, NULL);
+//	if (dm_dataset_space_id < 0) {
+//		// Error creating file
+//		fprintf(stderr, "Error creating dataset space\n");
+//		return NOK;
+//	}
+//
+//	// Create a dataset creation property list
+//	hid_t dm_property_list_id = H5Pcreate(H5P_DATASET_CREATE);
+//	H5Pset_layout(dm_property_list_id, H5D_CHUNKED);
+//
+//	// The choice of the chunk size affects performance!
+//	// for now we will choose one line
+//	hsize_t dm_chunk_dimensions[2] = { 1, n_words_line };
+//
+//	H5Pset_chunk(dm_property_list_id, 2, dm_chunk_dimensions);
+//
+//	// Create the dataset
+//	hid_t dm_dataset_id = H5Dcreate2(file_id, DM_DATASET_COLUMN_DATA,
+//	H5T_STD_U64LE, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
+//	H5P_DEFAULT);
+//	if (dm_dataset_id < 0) {
+//		fprintf(stderr, "Error creating disjoint matrix dataset\n");
+//		ret = NOK;
+//		goto out_dataset_space;
+//	}
+//
+//	// Save attributes
+//	if (write_disjoint_matrix_attributes(dm_dataset_id, n_attributes, n_lines)
+//			< 0) {
+//
+//		fprintf(stderr, "Error saving matrix atributes");
+//		ret = NOK;
+//		goto out_dataset;
+//	}
+//
+//	// Close resources
+//	H5Pclose(dm_property_list_id);
+//
+//	hsize_t mem_dimensions[2] = { 1, n_words_line };
+//	// Create a memory dataspace to indicate the size of our buffer/chunk
+//	hid_t dm_memory_space_id = H5Screate_simple(2, mem_dimensions, NULL);
+//	if (dm_memory_space_id < 0) {
+//		fprintf(stderr, "Error creating disjoint matrix memory space\n");
+//		ret = NOK;
+//		goto out_memory_space;
+//	}
+//
+//	// Alocate buffer
+//	word_t *buffer = (word_t*) malloc(sizeof(word_t) * n_lines);
+//
+//	// We will write one line at a time
+//	hsize_t count[2] = { 1, n_words_line };
+//	hsize_t offset[2] = { 0, 0 };
+//
+//	// Used to print out progress message
+//	uint32_t next_output = 0;
+//
+//	// Current buffer position
+//	word_t *current_buffer = buffer;
+//
+//	for (uint32_t n = 0; n < dataset->n_words; n++) {
+//		current_buffer = buffer;
+//		for (uint32_t ci = 0; ci < n_classes - 1; ci++) {
+//			for (uint32_t cj = ci + 1; cj < n_classes; cj++) {
+//				for (uint32_t n_i = ci * n_observations;
+//						n_i < ci * n_observations + n_observations_per_class[ci];
+//						n_i++) {
+//					for (uint32_t n_j = cj * n_observations;
+//							n_j
+//									< cj * n_observations
+//											+ n_observations_per_class[cj];
+//							n_j++, current_buffer++) {
+//
+//						*current_buffer = observations_per_class[n_i][n]
+//								^ observations_per_class[n_j][n];
+//					}
+//				}
+//			}
+//		}
+//
+//		// The array now has data for (up to) WORD_BITS attributes.
+//		// We need to extract it and store it in the dataset
+//
+//		// Number of attributes actually computed. We are working in blocks of
+//		// WORD_BITS bits, but the last block may be incomplete
+//		// and only have < WORD_BITS attributes in it
+//		uint8_t read_attributes = WORD_BITS;
+//		if (n == dataset->n_words - 1) {
+//			read_attributes = n_attributes - WORD_BITS * n;
+//		}
+//
+//		save_attribute_data(dm_dataset_id, dm_dataset_space_id,
+//				dm_memory_space_id, offset, count, buffer, n_lines,
+//				read_attributes);
+//
+//		if (offset[0] > next_output) {
+//			fprintf(stdout, " - Writing disjoint matrix [2/2]: %0.0f%%      \r",
+//					((double) offset[0]) / n_attributes * 100);
+//			fflush( stdout);
+//
+//			next_output += n_attributes / 10;
+//		}
+//	}
+//
+//	free(buffer);
+//
+//out_memory_space:
+//	H5Sclose(dm_memory_space_id);
+//
+//out_dataset_space:
+//	H5Sclose(dm_dataset_space_id);
+//
+//out_dataset:
+//	H5Dclose(dm_dataset_id);
+//
+//	return ret;
 }
 
 herr_t save_attribute_data(const hid_t dm_dataset_id,
@@ -411,6 +601,46 @@ herr_t write_disjoint_matrix_attributes(const hid_t dataset_id,
 
 	ret = hdf5_write_attribute(dataset_id, HDF5_N_MATRIX_LINES_ATTRIBUTE,
 	H5T_NATIVE_UINT, &n_matrix_lines);
+
+	return ret;
+}
+
+herr_t write_line_totals_data(const hid_t file_id, const uint32_t *data,
+		const uint32_t n_lines) {
+
+	herr_t ret = 0;
+
+	// Dataset dimensions
+	hsize_t lt_dimensions[1] = { n_lines };
+
+	hid_t lt_dataset_space_id = H5Screate_simple(1, lt_dimensions, NULL);
+	if (lt_dataset_space_id < 0) {
+		// Error creating file
+		fprintf(stderr, "Error creating line totals dataset space\n");
+		return lt_dataset_space_id;
+	}
+
+	// Create the dataset
+	hid_t lt_dataset_id = H5Dcreate2(file_id, DM_DATASET_LINE_TOTALS,
+	H5T_STD_U32LE, lt_dataset_space_id, H5P_DEFAULT, H5P_DEFAULT,
+	H5P_DEFAULT);
+	if (lt_dataset_id < 0) {
+		fprintf(stderr, "Error creating line totals dataset\n");
+		ret = lt_dataset_id;
+		goto out_lt_dataset_space;
+	}
+
+	herr_t err = H5Dwrite(lt_dataset_id, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL,
+	H5P_DEFAULT, data);
+	if (err < 0) {
+		fprintf(stderr, "Error writing line totals\n");
+		ret = err;
+	}
+
+out_lt_dataset_space:
+	H5Sclose(lt_dataset_space_id);
+
+	H5Dclose(lt_dataset_id);
 
 	return ret;
 }
