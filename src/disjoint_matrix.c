@@ -266,8 +266,7 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 	if (out_dataspace_id < 0) {
 		// Error creating file
 		fprintf(stderr, "Error creating dataset space\n");
-		ret = NOK;
-		goto out_in_memspace;
+		return NOK;
 	}
 
 	// Create a dataset creation property list
@@ -412,136 +411,7 @@ out_out_memspace:
 out_out_dataspace:
 	H5Sclose(out_dataspace_id);
 
-out_in_memspace:
-//	H5Sclose(in_memspace_id);
-//
-//	//out_in_dataset:
-//	H5Dclose(in_dataset_id);
-//
-//	H5Sclose(in_dataspace_id);
-
 	return ret;
-//
-//	// Dataset dimensions
-//	hsize_t dm_dimensions[2] = { n_attributes, n_words_line };
-//
-//	hid_t dm_dataset_space_id = H5Screate_simple(2, dm_dimensions, NULL);
-//	if (dm_dataset_space_id < 0) {
-//		// Error creating file
-//		fprintf(stderr, "Error creating dataset space\n");
-//		return NOK;
-//	}
-//
-//	// Create a dataset creation property list
-//	hid_t dm_property_list_id = H5Pcreate(H5P_DATASET_CREATE);
-//	H5Pset_layout(dm_property_list_id, H5D_CHUNKED);
-//
-//	// The choice of the chunk size affects performance!
-//	// for now we will choose one line
-//	hsize_t dm_chunk_dimensions[2] = { 1, n_words_line };
-//
-//	H5Pset_chunk(dm_property_list_id, 2, dm_chunk_dimensions);
-//
-//	// Create the dataset
-//	hid_t dm_dataset_id = H5Dcreate2(file_id, DM_DATASET_COLUMN_DATA,
-//	H5T_STD_U64LE, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
-//	H5P_DEFAULT);
-//	if (dm_dataset_id < 0) {
-//		fprintf(stderr, "Error creating disjoint matrix dataset\n");
-//		ret = NOK;
-//		goto out_dataset_space;
-//	}
-//
-//	// Save attributes
-//	if (write_disjoint_matrix_attributes(dm_dataset_id, n_attributes, n_lines)
-//			< 0) {
-//
-//		fprintf(stderr, "Error saving matrix atributes");
-//		ret = NOK;
-//		goto out_dataset;
-//	}
-//
-//	// Close resources
-//	H5Pclose(dm_property_list_id);
-//
-//	hsize_t mem_dimensions[2] = { 1, n_words_line };
-//	// Create a memory dataspace to indicate the size of our buffer/chunk
-//	hid_t dm_memory_space_id = H5Screate_simple(2, mem_dimensions, NULL);
-//	if (dm_memory_space_id < 0) {
-//		fprintf(stderr, "Error creating disjoint matrix memory space\n");
-//		ret = NOK;
-//		goto out_memory_space;
-//	}
-//
-//	// Alocate buffer
-//	word_t *buffer = (word_t*) malloc(sizeof(word_t) * n_lines);
-//
-//	// We will write one line at a time
-//	hsize_t count[2] = { 1, n_words_line };
-//	hsize_t offset[2] = { 0, 0 };
-//
-//	// Used to print out progress message
-//	uint32_t next_output = 0;
-//
-//	// Current buffer position
-//	word_t *current_buffer = buffer;
-//
-//	for (uint32_t n = 0; n < dataset->n_words; n++) {
-//		current_buffer = buffer;
-//		for (uint32_t ci = 0; ci < n_classes - 1; ci++) {
-//			for (uint32_t cj = ci + 1; cj < n_classes; cj++) {
-//				for (uint32_t n_i = ci * n_observations;
-//						n_i < ci * n_observations + n_observations_per_class[ci];
-//						n_i++) {
-//					for (uint32_t n_j = cj * n_observations;
-//							n_j
-//									< cj * n_observations
-//											+ n_observations_per_class[cj];
-//							n_j++, current_buffer++) {
-//
-//						*current_buffer = observations_per_class[n_i][n]
-//								^ observations_per_class[n_j][n];
-//					}
-//				}
-//			}
-//		}
-//
-//		// The array now has data for (up to) WORD_BITS attributes.
-//		// We need to extract it and store it in the dataset
-//
-//		// Number of attributes actually computed. We are working in blocks of
-//		// WORD_BITS bits, but the last block may be incomplete
-//		// and only have < WORD_BITS attributes in it
-//		uint8_t read_attributes = WORD_BITS;
-//		if (n == dataset->n_words - 1) {
-//			read_attributes = n_attributes - WORD_BITS * n;
-//		}
-//
-//		save_attribute_data(dm_dataset_id, dm_dataset_space_id,
-//				dm_memory_space_id, offset, count, buffer, n_lines,
-//				read_attributes);
-//
-//		if (offset[0] > next_output) {
-//			fprintf(stdout, " - Writing disjoint matrix [2/2]: %0.0f%%      \r",
-//					((double) offset[0]) / n_attributes * 100);
-//			fflush( stdout);
-//
-//			next_output += n_attributes / 10;
-//		}
-//	}
-//
-//	free(buffer);
-//
-//out_memory_space:
-//	H5Sclose(dm_memory_space_id);
-//
-//out_dataset_space:
-//	H5Sclose(dm_dataset_space_id);
-//
-//out_dataset:
-//	H5Dclose(dm_dataset_id);
-//
-//	return ret;
 }
 
 herr_t save_attribute_data(const hid_t dm_dataset_id,
