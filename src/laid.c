@@ -153,11 +153,11 @@ int main(int argc, char **argv) {
 	if (calculate_solution(args.filename, &cover) != OK) {
 		return EXIT_FAILURE;
 	}
+	TOCK(stdout)
 
 	print_solution(stdout, &cover);
 
 	free_cover(&cover);
-	TOCK(stdout)
 
 	fprintf(stdout, "All done! ");
 

@@ -26,37 +26,46 @@ typedef struct cover_t {
 	uint32_t n_attributes;
 
 	/**
-	 * Number of words needed to store a line
-	 */
-	uint32_t n_words;
-
-	/**
 	 * Number of lines of the disjoint matrix
 	 */
-	uint32_t matrix_n_lines;
+	uint32_t n_matrix_lines;
 
 	/**
-	 * Array of bllacklisted lines
+	 * Array of line totals
 	 */
-	uint8_t *line_blacklist;
+	uint32_t *line_totals;
 
 	/**
-	 * Array of blacklisted attributes
+	 * Bit array of lines to cover
 	 */
-	uint8_t *attribute_blacklist;
+	word_t *uncovered_lines;
 
 	/**
-	 * Array with the current totals for all attributes
+	 * Array of selected attributes
 	 */
-	uint32_t *sum;
+	uint8_t *selected_attributes;
 
 } cover_t;
 
 /**
- * Applies the set cover algorithm to the hdf5 dataset and prints
- * the minimum attribute set that covers all the lines
+ * Applies the set cover algorithm using the hdf5 datasets
  */
 oknok_t calculate_solution(const char *filename, cover_t *cover);
+
+/**
+ * Reads a line from the dataset
+ */
+oknok_t hdf5_read_line(const hid_t dataset_id, const hid_t dataspace_id,
+		const hid_t memspace_id, uint32_t index, const uint32_t n_words,
+		word_t *line);
+
+/**
+ * Calculate index of best line using cover->line_totals
+ * and cover->uncovered_lines
+ *
+ * @Returns index of best line or -1 if all are covered
+ */
+int64_t get_best_line_index(const cover_t *cover);
 
 /**
  * Reads the disjoint matrix dataset and blacklists the lines that
