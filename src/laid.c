@@ -64,8 +64,7 @@ int main(int argc, char **argv) {
 		/**
 		 * READ DATASET
 		 */
-		if (hdf5_read_dataset(args.filename, args.datasetname,
-				&dataset) != DATASET_OK) {
+		if (hdf5_read_dataset(args.filename, args.datasetname, &dataset) != OK) {
 			// Error reading attributes
 			return EXIT_FAILURE;
 		}
@@ -81,8 +80,8 @@ int main(int argc, char **argv) {
 		// We need to know the number of longs in each line of the dataset so
 		// we can't use the standard qsort implementation
 		sort_r(dataset.data, dataset.n_observations,
-				dataset.n_longs * sizeof(unsigned long), compare_lines_extra,
-				&dataset.n_longs);
+				dataset.n_words * sizeof(word_t), compare_lines_extra,
+				&dataset.n_words);
 
 		fprintf(stdout, "\nSorted dataset ");
 		TOCK(stdout)
@@ -151,10 +150,10 @@ int main(int argc, char **argv) {
 
 	TICK
 	fprintf(stdout, "\nApplying set covering algorithm.\n");
-	if (calculate_solution(args.filename, DISJOINT_MATRIX_DATASET_NAME,
-			&cover) != OK) {
+	if (calculate_solution(args.filename, &cover) != OK) {
 		return EXIT_FAILURE;
 	}
+	TOCK(stdout)
 
 	print_solution(stdout, &cover);
 

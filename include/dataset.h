@@ -18,11 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-//
-#define NOT_BLACKLISTED false
-#define BLACKLISTED true
-
-#define DATASET_OK 0
 #define DATASET_INVALID_DIMENSIONS 1
 #define DATASET_NOT_ENOUGH_CLASSES 2
 #define DATASET_NOT_ENOUGH_ATTRIBUTES 4
@@ -33,59 +28,59 @@
  *
  */
 
-#define NEXT_LINE(line, n_longs) ((line) += (n_longs))
+#define NEXT_LINE(line, n_words) ((line) += (n_words))
 
-//#define GET_NEXT_OBSERVATION(line, n_longs) ((line) + (n_longs))
-//#define GET_PREV_OBSERVATION(line, n_longs) ((line) - (n_longs))
+//#define GET_NEXT_OBSERVATION(line, n_words) ((line) + (n_words))
+//#define GET_PREV_OBSERVATION(line, n_words) ((line) - (n_words))
 
-#define GET_LAST_OBSERVATION(dset, n_observations, n_longs) ((dset) + ((n_observations - 1) * n_longs))
+#define GET_LAST_OBSERVATION(dset, n_observations, n_words) ((dset) + ((n_observations - 1) * n_words))
 
 typedef struct dataset_t {
 	/**
 	 * Number of attributes
 	 */
-	unsigned int n_attributes;
+	uint32_t n_attributes;
 
 	/**
-	 * Number of longs (64bits) needed to store a line
+	 * Number of words needed to store a line
 	 */
-	unsigned int n_longs;
+	uint32_t n_words;
 
 	/**
-	 * Number of bits needed to store jnsqs
+	 * Number of bits needed to store jnsqs (max 32)
 	 */
-	unsigned int n_bits_for_jnsqs;
+	uint8_t n_bits_for_jnsqs;
 
 	/**
 	 * Number of observations
 	 */
-	unsigned int n_observations;
+	uint32_t n_observations;
 
 	/**
 	 * Number of classes
 	 */
-	unsigned int n_classes;
+	uint32_t n_classes;
 
 	/**
-	 * Number of bits used to store the class
+	 * Number of bits used to store the class (max 32)
 	 */
-	unsigned int n_bits_for_class;
+	uint8_t n_bits_for_class;
 
 	/**
 	 * Dataset data
 	 */
-	unsigned long *data;
+	word_t *data;
 
 	/**
 	 * Array with number of observations per class
 	 */
-	unsigned int *n_observations_per_class;
+	uint32_t *n_observations_per_class;
 
 	/**
 	 * Array with pointers for each observation per class.
 	 * They reference lines in *data
 	 */
-	unsigned long **observations_per_class;
+	word_t **observations_per_class;
 
 } dataset_t;
 
@@ -97,36 +92,35 @@ void init_dataset(dataset_t *dataset);
 /**
  * Returns the class of this data line
  */
-unsigned int get_class(const unsigned long *line,
-		const unsigned int n_attributes, const unsigned int n_longs,
-		const unsigned int n_bits_for_class);
+uint32_t get_class(const word_t *line, const uint32_t n_attributes,
+		const uint32_t n_words, const uint8_t n_bits_for_class);
 
 /**
  * Compares two lines of the dataset
  * Used to sort the dataset
  */
 //int compare_lines(const void *a, const void *b);
-int compare_lines_extra(const void *a, const void *b, void *n_longs);
+int compare_lines_extra(const void *a, const void *b, void *n_words);
 
 /**
  * Checks if the lines have the same attributes
  */
-bool has_same_attributes(const unsigned long *a, const unsigned long *b,
-		const unsigned int n_attributes, const unsigned long n_longs);
+bool has_same_attributes(const word_t *a, const word_t *b,
+		const uint32_t n_attributes);
 
 /**
  * Removes duplicated lines from the dataset.
  * Assumes the dataset is ordered
  * Returns number of removed observations
  */
-unsigned int remove_duplicates(dataset_t *dataset);
+uint32_t remove_duplicates(dataset_t *dataset);
 
 /**
  * Fill the arrays with the number of items per class and also a matrix with
  * references to the lines that belong to each class to simplify the
  * calculation of the disjoint matrix
  */
-int fill_class_arrays(dataset_t *dataset);
+oknok_t fill_class_arrays(dataset_t *dataset);
 
 /**
  * Prints some attributes of the dataset to stream

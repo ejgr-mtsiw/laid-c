@@ -18,36 +18,59 @@
 #include <stdint.h>
 
 /**
- * The name of the dataset that will store the disjoint matrix
- */
-#define DISJOINT_MATRIX_DATASET_NAME "DMX"
-
-/**
  * Calculates the number of lines for the disjoint matrix
  */
-unsigned long calculate_number_of_lines_of_disjoint_matrix(
-		const dataset_t *dataset);
+uint32_t calculate_number_of_lines_of_disjoint_matrix(const dataset_t *dataset);
 
 /**
- * Checks if the disjoint matrix dataset is already present in the hdf5 file
+ * Checks if the disjoint matrix datasets are already present in the hdf5 file
  */
 bool is_matrix_created(const char *filename);
 
 /**
  * Builds the disjoint matrix and saves it to the hdf5 dataset file
+ * It will build and store 2 datasets one with attributes as lines
+ * the other with atributes as columns
  */
-int create_disjoint_matrix(const char *filename, const dataset_t *dataset);
+oknok_t create_disjoint_matrix(const char *filename, const dataset_t *dataset);
 
 /**
- * Creates a new disjoint matrix dataset
+ * Creates the disjoint matrix datasets
  */
-int create_disjoint_matrix_dataset(const hid_t file_id,
+oknok_t create_disjoint_matrix_datasets(const hid_t file_id,
 		const dataset_t *dataset);
 
 /**
- * Creates the matrix atributes in the dataset
+ * Creates the dataset containing the disjoint matrix with attributes as columns
  */
-herr_t create_disjoint_matrix_attributes(const hid_t dataset_id,
-		const dataset_t *dataset);
+oknok_t create_line_dataset(const hid_t file_id, const dataset_t *dataset);
+
+/**
+ * Creates the dataset containing the disjoint matrix with attributes as lines
+ */
+oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset);
+
+/**
+ * Writes the matrix atributes in the dataset
+ */
+herr_t write_disjoint_matrix_attributes(const hid_t dataset_id,
+		const uint32_t n_attributes, const uint32_t n_matrix_lines);
+
+herr_t save_attribute_data(const hid_t dm_dataset_id,
+		const hid_t dm_dataset_space_id, const hid_t dm_memory_space_id,
+		hsize_t *offset, const hsize_t *count, const word_t *data,
+		const uint32_t n_lines, const uint8_t n_attributes);
+
+/**
+ * Writes the line totals metadata to the dataset
+ */
+herr_t write_line_totals_data(const hid_t file_id, const uint32_t *data,
+		const uint32_t n_lines);
+
+/**
+ * Writes the attribute totals metadata to the dataset
+ */
+herr_t write_attribute_totals_data(const hid_t file_id, const uint32_t *data,
+		const uint32_t n_attributes);
 
 #endif

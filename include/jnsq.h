@@ -27,22 +27,22 @@
  * Inconsistentes em ambiente HDF5+ Python na cloud INCD. Revista de
  * Ciências da Computação, 85-112.
  */
-void set_jnsq_bits(unsigned long *line, unsigned int inconsistency,
-		const unsigned int n_attributes, const unsigned int n_longs,
-		const unsigned int n_bits_for_class);
+void set_jnsq_bits(word_t *line, uint32_t inconsistency,
+		const uint32_t n_attributes, const uint32_t n_words,
+		const uint8_t n_bits_for_class);
 
 /**
  * Compares 2 lines and updates jnsq on to_update if needed and updates
  * inconsistency level
  */
-void update_jnsq(unsigned long *to_update, const unsigned long *to_compare,
-		unsigned int *inconsistency, const unsigned int n_attributes,
-		const unsigned int n_longs, const unsigned int n_bits_for_class);
+void update_jnsq(word_t *to_update, const word_t *to_compare,
+		uint32_t *inconsistency, const uint32_t n_attributes,
+		const uint32_t n_words, const uint8_t n_bits_for_class);
 
 /**
  * Adds the JNSQs attributes to the dataset.
  * Returns max inconsistency found
  */
-unsigned int add_jnsqs(dataset_t *dataset);
+uint32_t add_jnsqs(dataset_t *dataset);
 
 #endif

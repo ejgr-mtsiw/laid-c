@@ -17,41 +17,6 @@
 #include <stdint.h>
 
 /**
- * Number of ranks for data
- */
-#define DATA_RANK 2
-
-/**
- * Reads only the dataset attributes on file
- */
-#define READ_DATASET_ATTRIBUTES 1
-
-/**
- * Reads the dataset data on file
- */
-#define READ_DATASET_DATA 2
-
-/**
- * Attribute for number of classes
- */
-#define HDF5_N_CLASSES_ATTRIBUTE "n_classes"
-
-/**
- * Attribute for number of attributes
- */
-#define HDF5_N_ATTRIBUTES_ATTRIBUTE "n_attributes"
-
-/**
- * Attribute for number of observations
- */
-#define HDF5_N_OBSERVATIONS_ATTRIBUTE "n_observations"
-
-/**
- * Attrinute for the number of lines of the disjoint matrix
- */
-#define HDF5_N_MATRIX_LINES_ATTRIBUTE "n_matrix_lines"
-
-/**
  * Checks if dataset is present in file_id
  */
 bool hdf5_dataset_exists(const hid_t file_id, const char *dataset);
@@ -62,48 +27,38 @@ bool hdf5_dataset_exists(const hid_t file_id, const char *dataset);
 bool hdf5_dataset_exists_in_file(const char *filename, const char *datasetname);
 
 /**
+ * Opens the file and dataset indicated, returning references
+ * in file_id and dataset_id
+ */
+oknok_t hdf5_open_dataset(const char *filename, const char *datasetname,
+		hid_t *file_id, hid_t *dataset_id);
+
+/**
  * Fills the dataset structure
  */
-herr_t hdf5_read_dataset(const char *filename, const char *datasetname,
+oknok_t hdf5_read_dataset(const char *filename, const char *datasetname,
 		dataset_t *dataset);
-
-/**
- * Fills the dataset attributes only
- */
-herr_t hdf5_read_dataset_attributes_only(const char *filename,
-		const char *datasetname, dataset_t *dataset);
-
-/**
- * Reads the data from the hdf5 dataset
- */
-herr_t hdf5_read_hdf5_dataset(const char *filename, const char *datasetname,
-		dataset_t *dataset, const char data_to_read);
 
 /**
  * Reads the dataset attributes from the hdf5 file
  */
-herr_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t *dataset);
-
-/**
- * Reads the number_of lines from the disjoint matrix in the hdf5 file
- */
-unsigned long hdf5_read_dm_lines(const char *filename);
+oknok_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t *dataset);
 
 /**
  * Reads the value of one attribute from the dataset
  */
-herr_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
+oknok_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
 		hid_t datatype, void *value);
 
 /**
  * Reads the dataset data from the hdf5 file
  */
-herr_t hdf5_read_data(hid_t dataset_id, dataset_t *dataset);
+oknok_t hdf5_read_data(hid_t dataset_id, dataset_t *dataset);
 
 /**
  * Writes an attribute to the dataset
  */
-herr_t hdf5_write_attribute(hid_t dataset_id, const char *attribute,
+oknok_t hdf5_write_attribute(hid_t dataset_id, const char *attribute,
 		hid_t datatype, const void *value);
 
 /**
