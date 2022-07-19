@@ -67,4 +67,10 @@ herr_t save_attribute_data(const hid_t dm_dataset_id,
 herr_t write_line_totals_data(const hid_t file_id, const uint32_t *data,
 		const uint32_t n_lines);
 
+/**
+ * Writes the attribute totals metadata to the dataset
+ */
+herr_t write_attribute_totals_data(const hid_t file_id, const uint32_t *data,
+		const uint32_t n_attributes);
+
 #endif

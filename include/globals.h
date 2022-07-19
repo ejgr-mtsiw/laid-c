@@ -54,6 +54,11 @@ typedef int8_t oknok_t; // Is OK or NOK
 #define DM_DATASET_LINE_TOTALS "/LINE_TOTALS"
 
 /**
+ * The name of the dataset that will dtore the attribute totals
+ */
+#define DM_DATASET_ATTRIBUTE_TOTALS "/ATTRIBUTE_TOTALS"
+
+/**
  * Attribute for number of classes
  */
 #define HDF5_N_CLASSES_ATTRIBUTE "n_classes"

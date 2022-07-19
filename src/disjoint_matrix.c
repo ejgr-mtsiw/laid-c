@@ -203,7 +203,7 @@ oknok_t create_line_dataset(const hid_t file_id, const dataset_t *dataset) {
 	// Create line totals dataset
 	herr_t err = write_line_totals_data(file_id, lt_buffer, n_lines);
 	if (err < 0) {
-		fprintf(stderr, "Error creating line totals dataset space\n");
+		fprintf(stderr, "Error creating line totals dataset\n");
 		ret = NOK;
 	}
 
@@ -317,6 +317,13 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 	// Allocate transpose buffer
 	word_t t_buffer[WORD_BITS];
 
+	// Allocate attribute totals buffer
+	// Correct size
+	//uint32_t *attribute_buffer = (uint32_t*) calloc(n_attributes, sizeof(uint32_t));
+	// Rounded to 64 bits
+	uint32_t *attribute_buffer = (uint32_t*) calloc(out_n_lines,
+			sizeof(uint32_t));
+
 	// Used to print out progress message
 	uint32_t next_output = 0;
 
@@ -358,8 +365,15 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 			// save to output buffer
 			//! WARNING: We may have fewer than 64 lines to save
 			// We may be writing garbage
-			for (uint8_t l = 0; l < WORD_BITS; l++) {
+			uint8_t limit = WORD_BITS;
+//			if (i == (in_n_words - 1)) {
+//				limit = n_attributes % WORD_BITS;
+//			}
+
+			for (uint8_t l = 0; l < limit; l++) {
 				out_buffer[l * out_n_words + w] = t_buffer[l];
+				attribute_buffer[i * WORD_BITS + l] += __builtin_popcountl(
+						t_buffer[l]);
 			}
 		}
 
@@ -399,6 +413,15 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 		}
 	}
 
+	// Create attribute totals dataset
+	herr_t err = write_attribute_totals_data(file_id, attribute_buffer,
+			n_attributes);
+	if (err < 0) {
+		fprintf(stderr, "Error creating attribute totals dataset\n");
+		ret = NOK;
+	}
+
+	free(attribute_buffer);
 	free(in_buffer);
 	free(out_buffer);
 
@@ -511,6 +534,44 @@ out_lt_dataset_space:
 	H5Sclose(lt_dataset_space_id);
 
 	H5Dclose(lt_dataset_id);
+
+	return ret;
+}
+
+herr_t write_attribute_totals_data(const hid_t file_id, const uint32_t *data,
+		const uint32_t n_attributes) {
+	herr_t ret = 0;
+
+	// Dataset dimensions
+	hsize_t dimensions[1] = { n_attributes };
+
+	hid_t dataspace_id = H5Screate_simple(1, dimensions, NULL);
+	if (dataspace_id < 0) {
+		// Error creating file
+		fprintf(stderr, "Error creating attribute totals dataset space\n");
+		return dataspace_id;
+	}
+
+	// Create the dataset
+	hid_t dataset_id = H5Dcreate2(file_id, DM_DATASET_ATTRIBUTE_TOTALS,
+	H5T_STD_U32LE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	if (dataset_id < 0) {
+		fprintf(stderr, "Error creating attribute totals dataset\n");
+		ret = dataset_id;
+		goto out_dataspace;
+	}
+
+	herr_t err = H5Dwrite(dataset_id, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL,
+	H5P_DEFAULT, data);
+	if (err < 0) {
+		fprintf(stderr, "Error writing attribute totals\n");
+		ret = err;
+	}
+
+out_dataspace:
+	H5Sclose(dataspace_id);
+
+	H5Dclose(dataset_id);
 
 	return ret;
 }
