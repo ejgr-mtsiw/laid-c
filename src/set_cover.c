@@ -18,7 +18,8 @@ oknok_t calculate_solution(const char *filename, cover_t *cover) {
 
 	hid_t file_id, dataset_id;
 
-	ret = hdf5_open_dataset(filename, DM_DATASET_LINE_DATA, &file_id, &dataset_id);
+	ret = hdf5_open_dataset(filename, DM_DATASET_LINE_DATA, &file_id,
+			&dataset_id);
 	if (ret != OK) {
 		return ret;
 	}
@@ -95,8 +96,7 @@ oknok_t calculate_solution(const char *filename, cover_t *cover) {
 	}
 
 	// Calculate initial sum for each attribute
-	calculate_initial_sum(dataset_id, dm_dataset_space_id, dm_memory_space_id,
-			cover);
+	calculate_initial_sum(filename, cover);
 
 	uint32_t max_total = 0;
 	uint32_t attribute_to_blacklist = 0;
@@ -252,76 +252,31 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 /**
  * Finds the next attribute to blacklist
  */
-void calculate_initial_sum(const hid_t dataset_id, const hid_t dataset_space_id,
-		const hid_t memory_space_id, const cover_t *cover) {
+void calculate_initial_sum(const char *filename, const cover_t *cover) {
 
 	SETUP_TIMING
 	TICK
 
-	uint32_t n_words = cover->n_words;
+	hid_t file_id;
+	hid_t attribute_totals_dataset_id;
 
-	unsigned long n_lines = cover->matrix_n_lines;
-
-	uint32_t n_attributes = cover->n_attributes;
-
-	uint32_t *sum = cover->sum;
-
-	// Alocate buffer
-	word_t *buffer = (word_t*) malloc(sizeof(word_t) * n_words);
-
-	// We will read one line at a time
-	hsize_t offset[2] = { 0, 0 };
-	hsize_t count[2] = { 1, n_words };
-
-	// Current long
-	word_t c_long = 0;
-
-	// Current attribute
-	uint32_t c_attribute = 0;
-
-	uint32_t next_output = 0;
-
-	// Calculate totals
-	for (uint32_t i = 0; i < n_lines; i++) {
-
-		// Update offset
-		offset[0] = i;
-
-		// Select hyperslab on file dataset
-		H5Sselect_hyperslab(dataset_space_id, H5S_SELECT_SET, offset,
-		NULL, count, NULL);
-
-		// Read line to dataset
-		H5Dread(dataset_id, H5T_NATIVE_ULONG, memory_space_id, dataset_space_id,
-		H5P_DEFAULT, buffer);
-
-		for (uint32_t l = 0; l < n_words; l++) {
-			c_long = buffer[l];
-			c_attribute = l * WORD_BITS;
-
-			for (int bit = WORD_BITS - 1;
-					bit >= 0 && c_attribute < n_attributes;
-					bit--, c_attribute++) {
-
-				// Add to sum
-				sum[c_attribute] += !!(c_long & AND_MASK_TABLE[bit]);
-			}
-		}
-
-		if (i > next_output) {
-			fprintf(stdout, " - Computing initial sum %0.0f%%.\r",
-					((double) i) / n_lines * 100);
-			fflush( stdout);
-
-			next_output += n_lines / 10;
-		}
-
+	// OPEN ATTRIBUTE TOTALS DATASET
+	herr_t ret = hdf5_open_dataset(filename, DM_DATASET_ATTRIBUTE_TOTALS,
+			&file_id, &attribute_totals_dataset_id);
+	if (ret != OK) {
+		fprintf(stderr, "Error opening  attributes totals array.\n");
+		return;			// NOK;
 	}
+
+	// READ ATTRIBUTE TOTALS
+	H5Dread(attribute_totals_dataset_id, H5T_NATIVE_UINT, H5S_ALL,
+	H5S_ALL, H5P_DEFAULT, cover->sum);
+
+	H5Dclose(attribute_totals_dataset_id);
+	H5Fclose(file_id);
 
 	fprintf(stdout, " - Calculated initial sum ");
 	TOCK(stdout)
-
-	free(buffer);
 }
 
 void print_solution(FILE *stream, cover_t *cover) {

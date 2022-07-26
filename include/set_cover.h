@@ -69,8 +69,7 @@ herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
 /**
  * Calculates the initial totals for all attributes
  */
-void calculate_initial_sum(const hid_t dataset_id, const hid_t dataset_space_id,
-		const hid_t memory_space_id, const cover_t *cover);
+void calculate_initial_sum(const char *filename, const cover_t *cover);
 
 /**
  * Prints the attributes that are part of the solution
