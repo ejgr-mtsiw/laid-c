@@ -16,78 +16,35 @@ oknok_t calculate_solution(const char *filename, cover_t *cover) {
 	word_t *line = NULL, *column = NULL;
 
 	// OPEN LINE DATASET
-	hid_t file_id, line_dataset_id;
-	ret = hdf5_open_dataset(filename, DM_DATASET_LINE_DATA, &file_id,
-			&line_dataset_id);
+	hdf5_dataset_t line_dataset;
+	ret = hdf5_open_dataset(&line_dataset, filename, DM_DATASET_LINE_DATA);
 	if (ret != OK) {
 		return ret;
+	}
+
+	// OPEN COLUMN DATASET
+	hdf5_dataset_t column_dataset;
+	ret = hdf5_open_dataset(&column_dataset, filename, DM_DATASET_COLUMN_DATA);
+	if (ret != OK) {
+		goto out_close_free_line_dataset;
 	}
 
 	// READ ATTRIBUTES
 	// Number of attributes
 	uint32_t n_attributes = 0;
-	hdf5_read_attribute(line_dataset_id, HDF5_N_ATTRIBUTES_ATTRIBUTE,
+	hdf5_read_attribute(line_dataset.dataset_id, HDF5_N_ATTRIBUTES_ATTRIBUTE,
 	H5T_NATIVE_UINT, &n_attributes);
 
 	// Number of matrix lines
 	uint32_t n_matrix_lines = 0;
-	hdf5_read_attribute(line_dataset_id, HDF5_N_MATRIX_LINES_ATTRIBUTE,
+	hdf5_read_attribute(line_dataset.dataset_id, HDF5_N_MATRIX_LINES_ATTRIBUTE,
 	H5T_NATIVE_UINT, &n_matrix_lines);
 
 	uint32_t n_words_in_a_line = (uint32_t) (n_attributes / WORD_BITS)
 			+ (n_attributes % WORD_BITS != 0);
 
-	// Setup line dataspace
-	hid_t line_dataspace_id = H5Dget_space(line_dataset_id);
-
-	// Setup line memspace
-	hsize_t line_mem_dimensions = n_words_in_a_line;
-
-	// Create a memory dataspace to indicate the size of our buffer/chunk
-	hid_t line_memspace_id = H5Screate_simple(1, &line_mem_dimensions, NULL);
-	if (line_memspace_id < 0) {
-		fprintf(stderr, "Error creating lines memory space\n");
-		ret = NOK;
-		goto out_close_line_dataset;
-	}
-
-	hdf5_dataset_t line_dataset;
-	line_dataset.file_id = file_id;
-	line_dataset.dataset_id = line_dataset_id;
-	line_dataset.dataspace_id = line_dataspace_id;
-	line_dataset.memspace_id = line_memspace_id;
-
-	// OPEN COLUMN DATASET
-	hid_t column_dataset_id;
-	ret = hdf5_open_dataset(filename, DM_DATASET_COLUMN_DATA, &file_id,
-			&column_dataset_id);
-	if (ret != OK) {
-		goto out_close_line_memspace;
-	}
-
 	uint32_t n_words_in_a_column = (uint32_t) (n_matrix_lines / WORD_BITS)
 			+ (n_matrix_lines % WORD_BITS != 0);
-
-	// Setup column dataspace
-	hid_t column_dataspace_id = H5Dget_space(column_dataset_id);
-
-	// Setup column memspace
-	hsize_t column_mem_dimensions = n_words_in_a_column;
-
-	// Create a memory dataspace to indicate the size of our buffer/chunk
-	hid_t column_memspace_id = H5Screate_simple(1, &column_mem_dimensions,
-	NULL);
-	if (column_memspace_id < 0) {
-		fprintf(stderr, "Error creating columns memory space\n");
-		ret = NOK;
-		goto out_close_column_dataset;
-	}
-
-	hdf5_dataset_t column_dataset;
-	column_dataset.file_id = file_id;
-	column_dataset.dataset_id = column_dataset_id;
-	column_dataset.dataspace_id = column_dataspace_id;
-	column_dataset.memspace_id = column_memspace_id;
 
 	// SETUP COVERED LINES
 	// Fill with zeroes: they are all uncovered so far
@@ -96,7 +53,7 @@ oknok_t calculate_solution(const char *filename, cover_t *cover) {
 	if (covered_lines == NULL) {
 		fprintf(stderr, "Error allocating covered lines array.\n");
 		ret = NOK;
-		goto out_close_column_memspace;
+		goto out_close_free_column_dataset;
 	}
 
 	// SETUP SELECTED ATTRIBUTES
@@ -105,13 +62,13 @@ oknok_t calculate_solution(const char *filename, cover_t *cover) {
 	if (selected_attributes == NULL) {
 		fprintf(stderr, "Error allocating selected attributes array.\n");
 		ret = NOK;
-		goto out_close_column_memspace;
+		goto out_close_free_column_dataset;
 	}
 
 	// LOAD INITIAL ATTRIBUTE TOTALS
-	hid_t attribute_totals_dataset_id;
-	ret = hdf5_open_dataset(filename, DM_DATASET_ATTRIBUTE_TOTALS, &file_id,
-			&attribute_totals_dataset_id);
+	hdf5_dataset_t attribute_totals_dataset;
+	ret = hdf5_open_dataset(&attribute_totals_dataset, filename,
+	DM_DATASET_ATTRIBUTE_TOTALS);
 	if (ret != OK) {
 		goto out_close_free_selected_attributes;
 	}
@@ -123,13 +80,13 @@ oknok_t calculate_solution(const char *filename, cover_t *cover) {
 	if (attribute_totals == NULL) {
 		fprintf(stderr, "Error allocating attribute totals array.\n");
 		ret = NOK;
-		H5Dclose(attribute_totals_dataset_id);
+		close_hdf5_dataset(&attribute_totals_dataset);
 		goto out_close_free_selected_attributes;
 	}
 
-	status = H5Dread(attribute_totals_dataset_id, H5T_NATIVE_UINT, H5S_ALL,
-	H5S_ALL, H5P_DEFAULT, attribute_totals);
-	H5Dclose(attribute_totals_dataset_id);
+	status = H5Dread(attribute_totals_dataset.dataset_id, H5T_NATIVE_UINT,
+	H5S_ALL, H5S_ALL, H5P_DEFAULT, attribute_totals);
+	close_hdf5_dataset(&attribute_totals_dataset);
 	if (status < 0) {
 		ret = NOK;
 		goto out_close_free_selected_attributes;
@@ -236,18 +193,11 @@ out_free_buffers:
 out_close_free_line_buffer:
 	free(line);
 
-out_close_column_memspace:
-	H5Sclose(column_memspace_id);
+out_close_free_column_dataset:
+	close_hdf5_dataset(&column_dataset);
 
-out_close_column_dataset:
-	H5Dclose(column_dataset_id);
-
-out_close_line_memspace:
-	H5Sclose(line_memspace_id);
-
-out_close_line_dataset:
-	H5Dclose(line_dataset_id);
-	H5Fclose(file_id);
+out_close_free_line_dataset:
+	close_hdf5_dataset(&line_dataset);
 
 	return ret;
 }

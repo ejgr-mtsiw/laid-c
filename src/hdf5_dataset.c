@@ -30,25 +30,49 @@ bool hdf5_dataset_exists_in_file(const char *filename, const char *datasetname) 
 	return exists;
 }
 
-oknok_t hdf5_open_dataset(const char *filename, const char *datasetname,
-		hid_t *file_id, hid_t *dataset_id) {
+oknok_t hdf5_open_dataset(hdf5_dataset_t *dataset, const char *filename,
+		const char *datasetname) {
 
 	//Open the data file
-	*file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-	if (*file_id < 1) {
+	hid_t file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+	if (file_id < 1) {
 		// Error creating file
 		fprintf(stderr, "Error opening file %s\n", filename);
 		return NOK;
 	}
 
 	// Open input dataset
-	*dataset_id = H5Dopen2(*file_id, datasetname, H5P_DEFAULT);
-	if (*dataset_id < 1) {
+	hid_t dataset_id = H5Dopen2(file_id, datasetname, H5P_DEFAULT);
+	if (dataset_id < 1) {
 		// Error opening dataset
 		fprintf(stderr, "Dataset %s not found!\n", datasetname);
-		H5Fclose(*file_id);
+		H5Fclose(file_id);
 		return NOK;
 	}
+
+	hsize_t dimensions[2] = { 0, 0 };
+	hdf5_get_dataset_dimensions(dataset_id, dimensions);
+
+	// Setup line dataspace
+	hid_t dataspace_id = H5Dget_space(dataset_id);
+
+	// Setup line memspace
+	hsize_t mem_dimensions = dimensions[1];
+
+	// Create a memory dataspace to indicate the size of our buffer/chunk
+	hid_t memspace_id = H5Screate_simple(1, &mem_dimensions, NULL);
+	if (memspace_id < 0) {
+		fprintf(stderr, "Error creating memory space\n");
+		H5Dclose(dataset_id);
+		return NOK;
+	}
+
+	dataset->file_id = file_id;
+	dataset->dataset_id = dataset_id;
+	dataset->dataspace_id = dataspace_id;
+	dataset->memspace_id = memspace_id;
+	dataset->dimensions[0] = dimensions[0];
+	dataset->dimensions[1] = dimensions[1];
 
 	return OK;
 }
@@ -58,52 +82,27 @@ oknok_t hdf5_read_dataset(const char *filename, const char *datasetname,
 
 	oknok_t ret = OK;
 
-	hid_t file_id, dataset_id;
+	hdf5_dataset_t hdf5_dataset;
 
-	ret = hdf5_open_dataset(filename, datasetname, &file_id, &dataset_id);
+	ret = hdf5_open_dataset(&hdf5_dataset, filename, datasetname);
 	if (ret != OK) {
 		fprintf(stderr, "Error opening dataset\n");
 		return ret;
 	}
 
-	ret = hdf5_read_dataset_attributes(dataset_id, dataset);
+	ret = hdf5_read_dataset_attributes(hdf5_dataset.dataset_id, dataset);
 	if (ret != OK) {
 		fprintf(stderr, "Error reading attributes!\n");
 		goto out_close_dataset;
 	}
 
-	ret = hdf5_read_data(dataset_id, dataset);
+	ret = hdf5_read_data(hdf5_dataset.dataset_id, dataset);
 	if (ret != OK) {
 		fprintf(stderr, "Error reading data!\n");
 	}
 
 out_close_dataset:
-	H5Dclose(dataset_id);
-	H5Fclose(file_id);
-
-	return ret;
-}
-
-oknok_t hdf5_read_attributes(const char *filename, const char *datasetname,
-		dataset_t *dataset) {
-
-	oknok_t ret = OK;
-
-	hid_t file_id, dataset_id;
-
-	ret = hdf5_open_dataset(filename, datasetname, &file_id, &dataset_id);
-	if (ret != OK) {
-		fprintf(stderr, "Error opening dataset\n");
-		return ret;
-	}
-
-	ret = hdf5_read_dataset_attributes(dataset_id, dataset);
-	if (ret != OK) {
-		fprintf(stderr, "Error reading attributes!\n");
-	}
-
-	H5Dclose(dataset_id);
-	H5Fclose(file_id);
+	close_hdf5_dataset(&hdf5_dataset);
 
 	return ret;
 }
@@ -313,4 +312,12 @@ void hdf5_get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions) 
 
 	// Close dataspace
 	H5Sclose(dataset_space_id);
+}
+
+void close_hdf5_dataset(hdf5_dataset_t *dataset) {
+
+	H5Sclose(dataset->memspace_id);
+	H5Sclose(dataset->dataspace_id);
+	H5Dclose(dataset->dataset_id);
+	H5Fclose(dataset->file_id);
 }

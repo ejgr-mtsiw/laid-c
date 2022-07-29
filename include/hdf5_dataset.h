@@ -37,6 +37,11 @@ typedef struct hdf5_dataset_t {
 	 */
 	hid_t memspace_id;
 
+	/**
+	 * Dimensions
+	 */
+	hsize_t dimensions[2];
+
 } hdf5_dataset_t;
 
 /**
@@ -50,11 +55,10 @@ bool hdf5_dataset_exists(const hid_t file_id, const char *dataset);
 bool hdf5_dataset_exists_in_file(const char *filename, const char *datasetname);
 
 /**
- * Opens the file and dataset indicated, returning references
- * in file_id and dataset_id
+ * Opens the file and dataset indicated
  */
-oknok_t hdf5_open_dataset(const char *filename, const char *datasetname,
-		hid_t *file_id, hid_t *dataset_id);
+oknok_t hdf5_open_dataset(hdf5_dataset_t *dataset, const char *filename,
+		const char *datasetname);
 
 /**
  * Fills the dataset structure
@@ -99,6 +103,10 @@ int hdf5_get_chunk_dimensions(const hid_t dataset_id, hsize_t *chunk_dimensions)
  * Returns the dataset dimensions stored in the hdf5 dataset
  */
 void hdf5_get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions);
+/**
+ * Free resources and closes open connections
+ */
+void close_hdf5_dataset(hdf5_dataset_t *dataset);
 
 #endif
 
