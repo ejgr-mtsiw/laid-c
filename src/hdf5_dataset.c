@@ -225,6 +225,29 @@ oknok_t hdf5_read_data(hid_t dataset_id, dataset_t *dataset) {
 	return OK;
 }
 
+oknok_t hdf5_read_line(const hdf5_dataset_t *dataset, const uint32_t index,
+		const uint32_t n_words, word_t *line) {
+
+	//Setup offset
+	hsize_t offset[2] = { index, 0 };
+	//Setup count
+	hsize_t count[2] = { 1, n_words };
+
+	// Select hyperslab on file dataset
+	H5Sselect_hyperslab(dataset->dataspace_id, H5S_SELECT_SET, offset, NULL,
+			count, NULL);
+
+	// Read line from dataset
+	herr_t ret = H5Dread(dataset->dataset_id, H5T_NATIVE_ULONG,
+			dataset->memspace_id, dataset->dataspace_id, H5P_DEFAULT, line);
+	if (ret < 0) {
+		fprintf(stderr, "[hdf5_read_line] Error reading from dataset!\n");
+		return NOK;
+	}
+
+	return OK;
+}
+
 oknok_t hdf5_write_attribute(hid_t dataset_id, const char *attribute,
 		hid_t datatype, const void *value) {
 

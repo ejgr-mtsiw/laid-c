@@ -16,6 +16,29 @@
 #include <math.h>
 #include <stdint.h>
 
+typedef struct hdf5_dataset_t {
+	/**
+	 * file_id
+	 */
+	hid_t file_id;
+
+	/**
+	 * dataset_id
+	 */
+	hid_t dataset_id;
+
+	/**
+	 * dataspace_id
+	 */
+	hid_t dataspace_id;
+
+	/**
+	 * memspace_id
+	 */
+	hid_t memspace_id;
+
+} hdf5_dataset_t;
+
 /**
  * Checks if dataset is present in file_id
  */
@@ -51,10 +74,16 @@ oknok_t hdf5_read_attribute(hid_t dataset_id, const char *attribute,
 		hid_t datatype, void *value);
 
 /**
- * Reads the dataset data from the hdf5 file
+ * Reads the entire dataset data from the hdf5 file
  */
 oknok_t hdf5_read_data(hid_t dataset_id, dataset_t *dataset);
 
+/**
+ * Reads n_words from index line in the dataset and stores it in the
+ * line parameter
+ */
+oknok_t hdf5_read_line(const hdf5_dataset_t *dataset, const uint32_t index,
+		const uint32_t n_words, word_t *line);
 /**
  * Writes an attribute to the dataset
  */

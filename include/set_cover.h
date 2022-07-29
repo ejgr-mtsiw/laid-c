@@ -26,29 +26,34 @@ typedef struct cover_t {
 	uint32_t n_attributes;
 
 	/**
-	 * Number of words needed to store a line
-	 */
-	uint32_t n_words;
-
-	/**
 	 * Number of lines of the disjoint matrix
 	 */
-	uint32_t matrix_n_lines;
+	uint32_t n_matrix_lines;
 
 	/**
-	 * Array of bllacklisted lines
+	 * Number of words needed to store a line
 	 */
-	uint8_t *line_blacklist;
+	uint32_t n_words_in_a_line;
 
 	/**
-	 * Array of blacklisted attributes
+	 * Number of words needed to store a column
 	 */
-	uint8_t *attribute_blacklist;
+	uint32_t n_words_in_a_column;
+
+	/**
+	 * Bit array of covered lines
+	 */
+	word_t *covered_lines;
+
+	/**
+	 * Bit array of selected attributes
+	 */
+	word_t *selected_attributes;
 
 	/**
 	 * Array with the current totals for all attributes
 	 */
-	uint32_t *sum;
+	uint32_t *attribute_totals;
 
 } cover_t;
 
@@ -59,12 +64,26 @@ typedef struct cover_t {
 oknok_t calculate_solution(const char *filename, cover_t *cover);
 
 /**
- * Reads the disjoint matrix dataset and blacklists the lines that
- * depend on the attribute to blacklist
+ * Searches the attribute totals array for the highest score and returns the
+ * correspondent attribute index.
+ * Returns -1 if there are no more attributes available.
  */
-herr_t blacklist_lines(const hid_t dataset_id, const hid_t dataset_space_id,
-		const hid_t memory_space_id, const cover_t *cover,
-		const uint32_t attribute_to_blacklist);
+int64_t get_best_attribute_index(cover_t *cover);
+
+/**
+ * Sets this attribute as selected
+ */
+oknok_t mark_attribute_as_selected(cover_t *cover, int64_t attribute);
+
+/**
+ * Updates the contribution of this line to the attributes totals
+ */
+oknok_t remove_line_contribution(cover_t *cover, const word_t *line);
+
+/**
+ * Updates the list of covered lines, adding the lines covered by column
+ */
+oknok_t update_covered_lines(cover_t *cover, word_t *column);
 
 /**
  * Calculates the initial totals for all attributes
