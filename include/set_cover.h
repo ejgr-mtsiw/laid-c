@@ -86,9 +86,22 @@ oknok_t remove_line_contribution(cover_t *cover, const word_t *line);
 oknok_t update_covered_lines(cover_t *cover, word_t *column);
 
 /**
+ * Loads initial attribute totals from metadata dataset
+ */
+oknok_t load_initial_attribute_totals(uint32_t *attribute_totals,
+		const char *filename);
+
+/**
  * Calculates the initial totals for all attributes
  */
 void calculate_initial_sum(const char *filename, const cover_t *cover);
+
+/**
+ * Updates the attributes totals, removing the contribution of the lines
+ * covered by column
+ */
+oknok_t update_attribute_totals(cover_t *cover, hdf5_dataset_t *line_dataset,
+		word_t *column);
 
 /**
  * Prints the attributes that are part of the solution
@@ -96,8 +109,14 @@ void calculate_initial_sum(const char *filename, const cover_t *cover);
 void print_solution(FILE *stream, cover_t *cover);
 
 /**
+ * Initializes (zeroes) the cover parameters
+ */
+void init_cover(cover_t *cover);
+
+/**
  * Frees the allocated resources
  */
 void free_cover(cover_t *cover);
+
 #endif
 

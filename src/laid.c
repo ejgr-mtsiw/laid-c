@@ -147,6 +147,7 @@ int main(int argc, char **argv) {
 	}
 
 	cover_t cover;
+	init_cover(&cover);
 
 	TICK
 	fprintf(stdout, "\nApplying set covering algorithm.\n");
