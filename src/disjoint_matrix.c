@@ -250,9 +250,6 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 	uint32_t out_n_words = in_n_lines / WORD_BITS
 			+ (in_n_lines % WORD_BITS != 0);
 
-	// Number of lines on output dataset
-	//uint32_t out_n_lines = n_attributes;
-
 	// Round to nearest 64 so we don't have to worry when transposing
 	uint32_t out_n_lines = in_n_words * WORD_BITS;
 
@@ -307,15 +304,15 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 	//word_t *in_buffer = (word_t*) malloc(sizeof(word_t) * in_n_lines);
 	// Rounding to nearest multiple of 64 so we don't have to worry when
 	// transposing the last lines
-	word_t *in_buffer = (word_t*) malloc(
-			sizeof(word_t) * out_n_words * WORD_BITS);
+	word_t *in_buffer = (word_t*) calloc(out_n_words * WORD_BITS,
+			sizeof(word_t));
 
 	// Allocate output buffer
-	word_t *out_buffer = (word_t*) malloc(
-			sizeof(word_t) * out_n_words * WORD_BITS);
+	word_t *out_buffer = (word_t*) calloc(out_n_words * WORD_BITS,
+			sizeof(word_t));
 
 	// Allocate transpose buffer
-	word_t t_buffer[WORD_BITS];
+	word_t *t_buffer = calloc(WORD_BITS, sizeof(word_t));
 
 	// Allocate attribute totals buffer
 	// Correct size
@@ -362,18 +359,9 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 			// Transpose
 			transpose64(t_buffer);
 
-			// save to output buffer
-			//! WARNING: We may have fewer than 64 lines to save
-			// We may be writing garbage
-			uint8_t limit = WORD_BITS;
-//			if (i == (in_n_words - 1)) {
-//				limit = n_attributes % WORD_BITS;
-//			}
-
-			for (uint8_t l = 0; l < limit; l++) {
+			// Append to output buffer
+			for (uint8_t l = 0; l < WORD_BITS; l++) {
 				out_buffer[l * out_n_words + w] = t_buffer[l];
-				attribute_buffer[i * WORD_BITS + l] += __builtin_popcountl(
-						t_buffer[l]);
 			}
 		}
 
@@ -404,6 +392,15 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 //					out_buffer + out_n_words * l);
 //		}
 
+		// Update attribute totals
+		for (uint32_t at = 0; at < WORD_BITS; at++) {
+			for (uint64_t l = at * out_n_words; l < (at + 1) * out_n_words;
+					l++) {
+				attribute_buffer[out_offset[0] + at] += __builtin_popcountl(
+						out_buffer[l]);
+			}
+		}
+
 		if (i > next_output) {
 			fprintf(stdout, " - Writing disjoint matrix [2/2]: %0.0f%%      \r",
 					((double) i) / in_n_words * 100);
@@ -421,6 +418,7 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 		ret = NOK;
 	}
 
+	free(t_buffer);
 	free(attribute_buffer);
 	free(in_buffer);
 	free(out_buffer);
