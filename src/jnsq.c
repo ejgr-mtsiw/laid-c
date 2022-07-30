@@ -12,46 +12,42 @@ void set_jnsq_bits(word_t *line, uint32_t inconsistency,
 		const uint32_t n_attributes, const uint32_t n_words,
 		const uint8_t n_bits_for_class) {
 
-	// How many attributes remain on last word
+	// How many attributes remain on last word with attributes
 	uint8_t remaining_attributes = n_attributes % WORD_BITS;
+
+	// n jnsq bits on current word
+	uint8_t n_bits = n_bits_for_class;
 
 	if (remaining_attributes + n_bits_for_class > WORD_BITS) {
 		// jnsq bits split between words
 
 		// n jnsq bits on penultimate word
-		uint8_t n_bits_p = WORD_BITS - remaining_attributes;
+		n_bits = WORD_BITS - remaining_attributes;
+
+		// Invert consistency
+		inconsistency = invert_n_bits((word_t) inconsistency, n_bits);
+
+		line[n_words - 2] = set_bits(line[n_words - 2], inconsistency, 0,
+				n_bits);
 
 		// There's no attributes on last word
 		remaining_attributes = 0;
 
-		word_t penultimate_word = line[n_words - 2];
+		// Remove used bits from inconsistency
+		inconsistency >>= n_bits;
 
-		penultimate_word >>= n_bits_p;
-
-		for (; n_bits_p > 0; n_bits_p--) {
-			penultimate_word <<= 1;
-			penultimate_word |= (inconsistency & 1U);
-			inconsistency >>= 1;
-		}
-
-		line[n_words - 2] = penultimate_word;
+		// n jnsq bits on last word
+		n_bits = n_bits_for_class - n_bits;
 	}
 
-	// All remaining jnsq bits in the same word
-	word_t last_word = line[n_words - 1];
+	// All remaining jnsq bits are in the same word
+	uint8_t jnsq_start = WORD_BITS - remaining_attributes - n_bits;
 
-	uint8_t jnsq_start = WORD_BITS - remaining_attributes;
-	last_word >>= jnsq_start;
+	// Invert consistency
+	inconsistency = invert_n_bits((word_t) inconsistency, n_bits);
 
-	while (inconsistency) {
-		last_word <<= 1;
-		last_word |= (inconsistency & 1U);
-		inconsistency >>= 1;
-		jnsq_start--;
-	}
-
-	last_word <<= jnsq_start;
-	line[n_words - 1] = last_word;
+	line[n_words - 1] = set_bits(line[n_words - 1], inconsistency, jnsq_start,
+			n_bits);
 }
 
 void update_jnsq(word_t *to_update, const word_t *to_compare,
