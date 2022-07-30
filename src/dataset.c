@@ -27,42 +27,38 @@ void init_dataset(dataset_t *dataset) {
 uint32_t get_class(const word_t *line, const uint32_t n_attributes,
 		const uint32_t n_words, const uint8_t n_bits_for_class) {
 
-	// How many words for attributes?
-	uint32_t n_words_for_attributes = (uint32_t) (n_attributes / WORD_BITS)
-			+ (n_attributes % WORD_BITS != 0);
-
 	// How many attributes remain on last word
 	uint8_t remaining_attributes = n_attributes % WORD_BITS;
 
-	// Are all the class bits in this word?
-	if (n_words > n_words_for_attributes) {
-		// They're split between 2 words
+	if (n_bits_for_class == 1
+			|| (remaining_attributes + n_bits_for_class <= WORD_BITS)) {
+		// All bits on same word
+		// Class starts here
+		uint8_t at = (uint8_t) (WORD_BITS - remaining_attributes
+				- n_bits_for_class);
 
-		// n bits on penultimate word
-		uint8_t n_bits_p = WORD_BITS - remaining_attributes;
-
-		// n bits on last word
-		uint8_t n_bits_l = n_bits_for_class - n_bits_p;
-
-		//bits on penultimate word
-		uint32_t high_bits = (uint32_t) get_bits(line[n_words - 2], 0,
-				n_bits_p);
-		//bits on last word
-		uint32_t low_bits = (uint32_t) get_bits(line[n_words - 1],
-		WORD_BITS - n_bits_l, n_bits_l);
-
-		// Merge bits
-		high_bits <<= n_bits_l;
-		high_bits |= low_bits;
-
-		return high_bits;
+		return (uint32_t) get_bits(line[n_words - 1], at, n_bits_for_class);
 	}
 
-	// All bits on same word
-	// Class starts here
-	uint8_t at = (uint8_t) (WORD_BITS - remaining_attributes - n_bits_for_class);
+	// Class bits are split between 2 words
 
-	return (uint32_t) get_bits(line[n_words - 1], at, n_bits_for_class);
+	// n bits on penultimate word
+	uint8_t n_bits_p = WORD_BITS - remaining_attributes;
+
+	// n bits on last word
+	uint8_t n_bits_l = n_bits_for_class - n_bits_p;
+
+	//bits on penultimate word
+	uint32_t high_bits = (uint32_t) get_bits(line[n_words - 2], 0, n_bits_p);
+	//bits on last word
+	uint32_t low_bits = (uint32_t) get_bits(line[n_words - 1],
+	WORD_BITS - n_bits_l, n_bits_l);
+
+	// Merge bits
+	high_bits <<= n_bits_l;
+	high_bits |= low_bits;
+
+	return high_bits;
 }
 
 /**
