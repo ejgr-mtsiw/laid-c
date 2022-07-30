@@ -411,8 +411,7 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 	}
 
 	// Create attribute totals dataset
-	herr_t err = write_attribute_totals_data(file_id, attribute_buffer,
-			n_attributes);
+	herr_t err = write_attribute_totals_data(file_id, attribute_buffer, n_attributes);
 	if (err < 0) {
 		fprintf(stderr, "Error creating attribute totals dataset\n");
 		ret = NOK;
@@ -433,50 +432,6 @@ out_out_dataspace:
 	H5Sclose(out_dataspace_id);
 
 	return ret;
-}
-
-herr_t save_attribute_data(const hid_t dm_dataset_id,
-		const hid_t dm_dataset_space_id, const hid_t dm_memory_space_id,
-		hsize_t *offset, const hsize_t *count, const word_t *data,
-		const uint32_t n_lines, const uint8_t n_attributes) {
-
-	uint32_t n_words = count[1];
-
-	word_t *buffer = (word_t*) malloc(sizeof(word_t) * n_words);
-
-	// CUrrent line
-	uint32_t cl = 0;
-
-	for (uint8_t i = WORD_BITS; i > WORD_BITS - n_attributes; i--) {
-		// Reset buffer
-		memset(buffer, 0, sizeof(word_t) * n_words);
-		cl = 0;
-
-		for (uint32_t n = 0; n < n_words; n++) {
-
-			for (int j = WORD_BITS - 1; j >= 0 && cl < n_lines; j--, cl++) {
-				if (AND_MASK_TABLE[i - 1] & data[cl]) {
-					buffer[n] |= AND_MASK_TABLE[j];
-				}
-			}
-		}
-
-		// Save to file
-		// Select hyperslab on file dataset
-		H5Sselect_hyperslab(dm_dataset_space_id, H5S_SELECT_SET, offset, NULL,
-				count, NULL);
-
-		// Write buffer to dataset
-		H5Dwrite(dm_dataset_id, H5T_NATIVE_ULONG, dm_memory_space_id,
-				dm_dataset_space_id, H5P_DEFAULT, buffer);
-
-		// Update offset
-		offset[0]++;
-	}
-
-	free(buffer);
-
-	return OK;
 }
 
 herr_t write_disjoint_matrix_attributes(const hid_t dataset_id,

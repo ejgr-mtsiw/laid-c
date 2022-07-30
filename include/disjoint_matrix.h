@@ -56,11 +56,6 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset);
 herr_t write_disjoint_matrix_attributes(const hid_t dataset_id,
 		const uint32_t n_attributes, const uint32_t n_matrix_lines);
 
-herr_t save_attribute_data(const hid_t dm_dataset_id,
-		const hid_t dm_dataset_space_id, const hid_t dm_memory_space_id,
-		hsize_t *offset, const hsize_t *count, const word_t *data,
-		const uint32_t n_lines, const uint8_t n_attributes);
-
 /**
  * Writes the line totals metadata to the dataset
  */
