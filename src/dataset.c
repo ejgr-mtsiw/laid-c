@@ -117,11 +117,10 @@ bool has_same_attributes(const word_t *a, const word_t *b,
 	}
 
 	// We need to check last word
-	word_t mask = ~0UL;
-	mask >>= remaining_attributes;
-	mask = ~mask;
+	word_t last_word = get_bits((a[n_words - 1] ^ b[n_words - 1]),
+	WORD_BITS - remaining_attributes, remaining_attributes);
 
-	return !(mask & (a[n_words - 1] ^ b[n_words - 1]));
+	return (last_word == 0);
 }
 
 uint32_t remove_duplicates(dataset_t *dataset) {
