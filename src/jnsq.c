@@ -8,38 +8,50 @@
 
 #include "jnsq.h"
 
-/**
- * BUG: will not work properly if the class bits span two words
- */
 void set_jnsq_bits(word_t *line, uint32_t inconsistency,
 		const uint32_t n_attributes, const uint32_t n_words,
 		const uint8_t n_bits_for_class) {
 
-	// Check how many attributes remain
+	// How many attributes remain on last word
 	uint8_t remaining_attributes = n_attributes % WORD_BITS;
 
-	// Jnsq starts after this bit
-	uint8_t jnsq_start = WORD_BITS - remaining_attributes;
+	if (remaining_attributes + n_bits_for_class > WORD_BITS) {
+		// jnsq bits split between words
 
-	word_t last_long = line[n_words - 1];
+		// n jnsq bits on penultimate word
+		uint8_t n_bits_p = WORD_BITS - remaining_attributes;
 
-	last_long >>= jnsq_start;
+		// There's no attributes on last word
+		remaining_attributes = 0;
 
-	uint8_t i = 0;
+		word_t penultimate_word = line[n_words - 2];
 
-	for (i = 0; inconsistency > 0 && i < n_bits_for_class; i++) {
-		last_long <<= 1;
+		penultimate_word >>= n_bits_p;
 
-		if (inconsistency & 1) {
-			last_long |= 1;
+		for (; n_bits_p > 0; n_bits_p--) {
+			penultimate_word <<= 1;
+			penultimate_word |= (inconsistency & 1U);
+			inconsistency >>= 1;
 		}
 
-		inconsistency >>= 1;
+		line[n_words - 2] = penultimate_word;
 	}
 
-	last_long <<= jnsq_start - i;
+	// All remaining jnsq bits in the same word
+	word_t last_word = line[n_words - 1];
 
-	line[n_words - 1] = last_long;
+	uint8_t jnsq_start = WORD_BITS - remaining_attributes;
+	last_word >>= jnsq_start;
+
+	while (inconsistency) {
+		last_word <<= 1;
+		last_word |= (inconsistency & 1U);
+		inconsistency >>= 1;
+		jnsq_start--;
+	}
+
+	last_word <<= jnsq_start;
+	line[n_words - 1] = last_word;
 }
 
 void update_jnsq(word_t *to_update, const word_t *to_compare,
