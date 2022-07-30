@@ -21,7 +21,8 @@ word_t invert_n_bits(word_t source, uint8_t numbits) {
 		return source;
 	}
 
-	word_t r_source = source >>= numbits;
+	word_t r_source = source;
+	r_source >>= numbits;
 
 	while (numbits--) {
 		r_source <<= 1;
