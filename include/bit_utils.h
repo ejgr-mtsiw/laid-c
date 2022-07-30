@@ -56,6 +56,15 @@ word_t set_bits(const word_t destination, const word_t source, const uint8_t at,
 		const uint8_t numbits);
 
 /**
+ * Inverts the last numbits of source
+ * Ex:
+ * source: 00000101
+ * numbits: 4
+ * inverted: 00001010
+ */
+word_t invert_n_bits(word_t source, uint8_t numbits);
+
+/**
  * Return numbits from source starting at at
  */
 word_t get_bits(const word_t source, const uint8_t at, const uint8_t numbits);
