@@ -179,12 +179,6 @@ oknok_t fill_class_arrays(dataset_t *dataset) {
 		return NOK;
 	}
 
-	// Current line
-	word_t *line = dataset->data;
-
-	// This line class
-	uint32_t line_class = 0;
-
 	// Number of longs in a line
 	uint32_t n_words = dataset->n_words;
 
@@ -203,7 +197,17 @@ oknok_t fill_class_arrays(dataset_t *dataset) {
 	// Number of observations per class
 	uint32_t *n_observations_per_class = dataset->n_observations_per_class;
 
-	for (uint32_t i = 0; i < n_observations; i++) {
+	// Current line
+	word_t *line = dataset->data;
+
+	// Last line
+	word_t *last = GET_LAST_OBSERVATION(line, n_observations, n_words);
+
+	// This line class
+	uint32_t line_class = 0;
+
+	while (line <= last) {
+		//for (uint32_t i = 0; i < n_observations; i++) {
 		line_class = get_class(line, n_attributes, n_words, n_bits_for_class);
 
 		observations_per_class[line_class * n_observations
