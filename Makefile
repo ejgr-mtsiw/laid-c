@@ -1,5 +1,5 @@
 CC			:= clang
-CPPFLAGS		:= -Wall -Wextra -Werror -pedantic-errors
+CPPFLAGS		:= -Wall -Wextra -Werror -pedantic-errors -std=gnu11
 LDFLAGS			:= -L/usr/lib -L/usr/local/lib -lm -lhdf5
 BUILD			:= ./bin
 OBJ_DIR			:= $(BUILD)/objects
@@ -29,10 +29,10 @@ build:
 	@mkdir -p $(APP_DIR)
 	@mkdir -p $(OBJ_DIR)
 
-debug: CPPFLAGS += -DDEBUG -g
+debug: CPPFLAGS += -DDEBUG -fsanitize=address,leak,undefined -g
 debug: all
 
-release: CPPFLAGS += -O2
+release: CPPFLAGS += -O3 -march=native
 release: all
 
 clean:
