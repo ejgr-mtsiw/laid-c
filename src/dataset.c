@@ -27,12 +27,13 @@ void init_dataset(dataset_t *dataset) {
 uint32_t get_class(const word_t *line, const uint32_t n_attributes,
 		const uint32_t n_words, const uint8_t n_bits_for_class) {
 
-	// How many attributes remain on last word
+	// How many attributes remain on last word with attributes
 	uint8_t remaining_attributes = n_attributes % WORD_BITS;
 
 	if (n_bits_for_class == 1
 			|| (remaining_attributes + n_bits_for_class <= WORD_BITS)) {
 		// All bits on same word
+
 		// Class starts here
 		uint8_t at = (uint8_t) (WORD_BITS - remaining_attributes
 				- n_bits_for_class);
