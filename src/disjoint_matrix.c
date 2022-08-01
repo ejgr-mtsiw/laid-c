@@ -116,10 +116,12 @@ oknok_t create_line_dataset(const hid_t file_id, const dataset_t *dataset) {
 	hid_t dm_dataset_id = H5Dcreate2(file_id, DM_DATASET_LINE_DATA,
 	H5T_STD_U64LE, dm_dataset_space_id, H5P_DEFAULT, dm_property_list_id,
 	H5P_DEFAULT);
+
+	H5Sclose(dm_dataset_space_id);
+
 	if (dm_dataset_id < 0) {
 		fprintf(stderr, "Error creating disjoint matrix dataset\n");
-		ret = NOK;
-		goto out_dataset_space;
+		return NOK;
 	}
 
 	// Save attributes
@@ -178,6 +180,14 @@ oknok_t create_line_dataset(const hid_t file_id, const dataset_t *dataset) {
 					// Update offset
 					offset[0] = c_line;
 
+					// Setup dataspace
+					// If writing to a portion of a dataset in a loop, be sure
+					// to close the dataspace with each iteration, as this
+					// can cause a large temporary "memory leak".
+					// "Achieving High Performance I/O with HDF5"
+					dm_dataset_space_id = H5Screate_simple(2, dm_dimensions,
+					NULL);
+
 					// Select hyperslab on file dataset
 					H5Sselect_hyperslab(dm_dataset_space_id, H5S_SELECT_SET,
 							offset, NULL, count, NULL);
@@ -186,6 +196,8 @@ oknok_t create_line_dataset(const hid_t file_id, const dataset_t *dataset) {
 					H5Dwrite(dm_dataset_id, H5T_NATIVE_ULONG,
 							dm_memory_space_id, dm_dataset_space_id,
 							H5P_DEFAULT, buffer);
+
+					H5Sclose(dm_dataset_space_id);
 
 					if (c_line > next_output) {
 						fprintf(stdout,
@@ -215,9 +227,6 @@ out_memory_space:
 
 out_dataset:
 	H5Dclose(dm_dataset_id);
-
-out_dataset_space:
-	H5Sclose(dm_dataset_space_id);
 
 	return ret;
 }
@@ -280,10 +289,12 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 	hid_t out_dataset_id = H5Dcreate2(file_id, DM_DATASET_COLUMN_DATA,
 	H5T_STD_U64LE, out_dataspace_id, H5P_DEFAULT, out_property_list_id,
 	H5P_DEFAULT);
+
+	H5Sclose(out_dataspace_id);
+
 	if (out_dataset_id < 0) {
 		fprintf(stderr, "Error creating output dataset\n");
-		ret = NOK;
-		goto out_out_dataspace;
+		return NOK;
 	}
 
 	// Close resources
@@ -371,6 +382,14 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 
 		// SAVE TRANSPOSED ARRAY
 		out_offset[0] = i * WORD_BITS;
+
+		// Setup dataspace
+		// If writing to a portion of a dataset in a loop, be sure
+		// to close the dataspace with each iteration, as this
+		// can cause a large temporary "memory leak".
+		// "Achieving High Performance I/O with HDF5"
+		hid_t out_dataspace_id = H5Screate_simple(2, out_dimensions, NULL);
+
 		H5Sselect_hyperslab(out_dataspace_id, H5S_SELECT_SET, out_offset,
 		NULL, out_count, NULL);
 
@@ -392,6 +411,8 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 //					out_buffer + out_n_words * l);
 //		}
 
+		H5Sclose(out_dataspace_id);
+
 		// Update attribute totals
 		for (uint32_t at = 0; at < WORD_BITS; at++) {
 			for (uint64_t l = at * out_n_words; l < (at + 1) * out_n_words;
@@ -411,7 +432,8 @@ oknok_t create_column_dataset(const hid_t file_id, const dataset_t *dataset) {
 	}
 
 	// Create attribute totals dataset
-	herr_t err = write_attribute_totals_data(file_id, attribute_buffer, n_attributes);
+	herr_t err = write_attribute_totals_data(file_id, attribute_buffer,
+			n_attributes);
 	if (err < 0) {
 		fprintf(stderr, "Error creating attribute totals dataset\n");
 		ret = NOK;
@@ -427,9 +449,6 @@ out_out_memspace:
 
 	//out_out_dataset:
 	H5Dclose(out_dataset_id);
-
-out_out_dataspace:
-	H5Sclose(out_dataspace_id);
 
 	return ret;
 }

@@ -28,16 +28,6 @@ typedef struct hdf5_dataset_t {
 	hid_t dataset_id;
 
 	/**
-	 * dataspace_id
-	 */
-	hid_t dataspace_id;
-
-	/**
-	 * memspace_id
-	 */
-	hid_t memspace_id;
-
-	/**
 	 * Dimensions
 	 */
 	hsize_t dimensions[2];

@@ -50,29 +50,9 @@ oknok_t hdf5_open_dataset(hdf5_dataset_t *dataset, const char *filename,
 		return NOK;
 	}
 
-	hsize_t dimensions[2] = { 0, 0 };
-	hdf5_get_dataset_dimensions(dataset_id, dimensions);
-
-	// Setup line dataspace
-	hid_t dataspace_id = H5Dget_space(dataset_id);
-
-	// Setup line memspace
-	hsize_t mem_dimensions = dimensions[1];
-
-	// Create a memory dataspace to indicate the size of our buffer/chunk
-	hid_t memspace_id = H5Screate_simple(1, &mem_dimensions, NULL);
-	if (memspace_id < 0) {
-		fprintf(stderr, "Error creating memory space\n");
-		H5Dclose(dataset_id);
-		return NOK;
-	}
-
 	dataset->file_id = file_id;
 	dataset->dataset_id = dataset_id;
-	dataset->dataspace_id = dataspace_id;
-	dataset->memspace_id = memspace_id;
-	dataset->dimensions[0] = dimensions[0];
-	dataset->dimensions[1] = dimensions[1];
+	hdf5_get_dataset_dimensions(dataset_id, dataset->dimensions);
 
 	return OK;
 }
@@ -232,17 +212,24 @@ oknok_t hdf5_read_line(const hdf5_dataset_t *dataset, const uint32_t index,
 	//Setup count
 	hsize_t count[2] = { 1, n_words };
 
+	const hsize_t dimensions = n_words;
+
+	// Create a memory dataspace to indicate the size of our buffer/chunk
+	hid_t memspace_id = H5Screate_simple(1, &dimensions, NULL);
+
+	// Setup line dataspace
+	hid_t dataspace_id = H5Dget_space(dataset->dataset_id);
+
 	// Select hyperslab on file dataset
-	H5Sselect_hyperslab(dataset->dataspace_id, H5S_SELECT_SET, offset, NULL,
-			count, NULL);
+	H5Sselect_hyperslab(dataspace_id, H5S_SELECT_SET, offset, NULL, count,
+	NULL);
 
 	// Read line from dataset
-	herr_t ret = H5Dread(dataset->dataset_id, H5T_NATIVE_ULONG,
-			dataset->memspace_id, dataset->dataspace_id, H5P_DEFAULT, line);
-	if (ret < 0) {
-		fprintf(stderr, "[hdf5_read_line] Error reading from dataset!\n");
-		return NOK;
-	}
+	H5Dread(dataset->dataset_id, H5T_NATIVE_ULONG, memspace_id, dataspace_id,
+			H5P_DEFAULT, line);
+
+	H5Sclose(dataspace_id);
+	H5Sclose(memspace_id);
 
 	return OK;
 }
@@ -316,8 +303,6 @@ void hdf5_get_dataset_dimensions(hid_t dataset_id, hsize_t *dataset_dimensions) 
 
 void close_hdf5_dataset(hdf5_dataset_t *dataset) {
 
-	H5Sclose(dataset->memspace_id);
-	H5Sclose(dataset->dataspace_id);
 	H5Dclose(dataset->dataset_id);
 	H5Fclose(dataset->file_id);
 }
