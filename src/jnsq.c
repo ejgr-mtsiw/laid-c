@@ -6,11 +6,19 @@
  ============================================================================
  */
 
-#include "jnsq.h"
+//#include "jnsq.h"
 
-void set_jnsq_bits(word_t *line, uint32_t inconsistency,
-		const uint32_t n_attributes, const uint32_t n_words,
-		const uint8_t n_bits_for_class) {
+#include "bit_utils.h"
+#include "dataset.h"
+#include "word_t.h"
+
+#include <math.h>
+#include <stdint.h>
+
+void set_jnsq_bits(word_t* line, uint32_t inconsistency,
+				   const uint32_t n_attributes, const uint32_t n_words,
+				   const uint8_t n_bits_for_class)
+{
 
 	// How many attributes remain on last word with attributes
 	uint8_t remaining_attributes = n_attributes % WORD_BITS;
@@ -18,7 +26,8 @@ void set_jnsq_bits(word_t *line, uint32_t inconsistency,
 	// n jnsq bits on current word
 	uint8_t n_bits = n_bits_for_class;
 
-	if (remaining_attributes + n_bits_for_class > WORD_BITS) {
+	if (remaining_attributes + n_bits_for_class > WORD_BITS)
+	{
 		// jnsq bits split between words
 
 		// n jnsq bits on penultimate word
@@ -27,8 +36,8 @@ void set_jnsq_bits(word_t *line, uint32_t inconsistency,
 		// Invert consistency
 		inconsistency = invert_n_bits((word_t) inconsistency, n_bits);
 
-		line[n_words - 2] = set_bits(line[n_words - 2], inconsistency, 0,
-				n_bits);
+		line[n_words - 2]
+			= set_bits(line[n_words - 2], inconsistency, 0, n_bits);
 
 		// There's no attributes on last word
 		remaining_attributes = 0;
@@ -46,22 +55,25 @@ void set_jnsq_bits(word_t *line, uint32_t inconsistency,
 	// Invert consistency
 	inconsistency = invert_n_bits((word_t) inconsistency, n_bits);
 
-	line[n_words - 1] = set_bits(line[n_words - 1], inconsistency, jnsq_start,
-			n_bits);
+	line[n_words - 1]
+		= set_bits(line[n_words - 1], inconsistency, jnsq_start, n_bits);
 }
 
-void update_jnsq(word_t *to_update, const word_t *to_compare,
-		uint32_t *inconsistency, const uint32_t n_attributes,
-		const uint32_t n_words, const uint8_t n_bits_for_class) {
-
+void update_jnsq(word_t* to_update, const word_t* to_compare,
+				 uint32_t* inconsistency, const uint32_t n_attributes,
+				 const uint32_t n_words, const uint8_t n_bits_for_class)
+{
 	// Set the line JNSQ
 	set_jnsq_bits(to_update, (*inconsistency), n_attributes, n_words,
-			n_bits_for_class);
+				  n_bits_for_class);
 
-	if (has_same_attributes(to_update, to_compare, n_attributes)) {
+	if (has_same_attributes(to_update, to_compare, n_attributes))
+	{
 		// Inconsistency!
-		(*inconsistency)++; //Because observations are sorted by class
-	} else {
+		(*inconsistency)++; // Because observations are sorted by class
+	}
+	else
+	{
 		// Differente attributes - reset JNSQ
 		(*inconsistency) = 0;
 	}
@@ -70,13 +82,13 @@ void update_jnsq(word_t *to_update, const word_t *to_compare,
 /**
  * Adds the JNSQs attributes to the dataset
  */
-uint32_t add_jnsqs(dataset_t *dataset) {
-
+uint32_t add_jnsqs(dataset_t* dataset)
+{
 	// Current line
-	word_t *current = dataset->data;
+	word_t* current = dataset->data;
 
 	// Previous line
-	word_t *prev = current;
+	word_t* prev = current;
 
 	// Number of attributes
 	uint32_t n_attributes = dataset->n_attributes;
@@ -91,7 +103,7 @@ uint32_t add_jnsqs(dataset_t *dataset) {
 	uint8_t n_bits_for_class = dataset->n_bits_for_class;
 
 	// Last line
-	word_t *last = GET_LAST_OBSERVATION(dataset->data, n_observations, n_words);
+	word_t* last = GET_LAST_LINE(dataset->data, n_observations, n_words);
 
 	// Inconsistency
 	uint32_t inconsistency = 0;
@@ -103,29 +115,35 @@ uint32_t add_jnsqs(dataset_t *dataset) {
 	set_jnsq_bits(current, 0, n_attributes, n_words, n_bits_for_class);
 
 	// Now do the others
-	for (prev = dataset->data; prev < last; NEXT_LINE(prev, n_words)) {
+	for (prev = dataset->data; prev < last; NEXT_LINE(prev, n_words))
+	{
 		NEXT_LINE(current, n_words);
 
-		if (has_same_attributes(current, prev, n_attributes)) {
+		if (has_same_attributes(current, prev, n_attributes))
+		{
 			// Inconsistency!
-			inconsistency++; //Because observations are sorted by class
+			inconsistency++; // Because observations are sorted by class
 
 			// Update max
-			if (inconsistency > max_inconsistency) {
+			if (inconsistency > max_inconsistency)
+			{
 				max_inconsistency = inconsistency;
 			}
-		} else {
+		}
+		else
+		{
 			// Differente attributes - reset JNSQ
 			inconsistency = 0;
 		}
 
 		// Set the line JNSQ
 		set_jnsq_bits(current, inconsistency, n_attributes, n_words,
-				n_bits_for_class);
+					  n_bits_for_class);
 	}
 
 	// Update number of attributes to include the new JNSQs
-	if (max_inconsistency > 0) {
+	if (max_inconsistency > 0)
+	{
 		// How many bits are needed for jnsq attributes
 		uint8_t n_bits_for_jnsq = ceil(log2(max_inconsistency + 1));
 
