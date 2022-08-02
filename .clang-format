@@ -1,10 +1,15 @@
 ﻿---
-BasedOnStyle: WebKit
+BasedOnStyle: Webkit
+BreakBeforeBraces: Allman
 AlignAfterOpenBracket: Align
-AlignTrailingComments: 'true'
-ColumnLimit: '80'
-SpaceAfterCStyleCast: 'true'
-TabWidth: '4'
+AlignTrailingComments: true
+AlignConsecutiveMacros: Consecutive
+AlignConsecutiveAssignments: Consecutive
+IndentGotoLabels: false
+IndentCaseLabels: true
+ColumnLimit: 80
+SpaceAfterCStyleCast: true
+TabWidth: 4
 UseTab: Always
 
 ...
