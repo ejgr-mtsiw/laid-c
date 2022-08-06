@@ -1,15 +1,17 @@
-CC			:= clang
+CC				:= clang
 CPPFLAGS		:= -Wall -Wextra -Werror -pedantic-errors -std=gnu11
 LDFLAGS			:= -L/usr/lib -L/usr/local/lib -lm -lhdf5
 BUILD			:= ./bin
 OBJ_DIR			:= $(BUILD)/objects
 APP_DIR			:= $(BUILD)
 TARGET			:= laid
-INCLUDE			:= -Iinclude/ -I/usr/local/include/
-SRC			:= $(wildcard src/*.c)
+INCLUDE			:= -I./src/ -I/usr/local/include -I /usr/include
+#SRC				:= $(wildcard src/*.c)
+SRC_DIRS		:= ./src
+SRC				:= $(shell find $(SRC_DIRS) -name *.c)
 
 OBJECTS			:= $(SRC:%.c=$(OBJ_DIR)/%.o)
-DEPENDENCIES		:= $(OBJECTS:.o=.d)
+DEPENDENCIES	:= $(OBJECTS:.o=.d)
 
 all: build $(APP_DIR)/$(TARGET)
 

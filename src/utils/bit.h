@@ -9,7 +9,7 @@
 #ifndef BIT_UTILS_H
 #define BIT_UTILS_H
 
-#include <word_t.h>
+#include "types/word_t.h"
 
 #include <stdint.h>
 

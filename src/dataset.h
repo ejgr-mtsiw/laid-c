@@ -9,8 +9,8 @@
 #ifndef DATASET_H
 #define DATASET_H
 
-#include "oknok_t.h"
-#include "word_t.h"
+#include "types/oknok_t.h"
+#include "types/word_t.h"
 
 #include <stdbool.h>
 #include <stdint.h>

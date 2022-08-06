@@ -8,11 +8,11 @@
 
 #include "set_cover.h"
 
-#include "bit_utils.h"
-#include "hdf5_dataset.h"
-#include "oknok_t.h"
-#include "timing.h"
-#include "word_t.h"
+#include "dataset_hdf5.h"
+#include "types/oknok_t.h"
+#include "types/word_t.h"
+#include "utils/bit.h"
+#include "utils/timing.h"
 
 #include "hdf5.h"
 
