@@ -1,13 +1,13 @@
 /*
  ============================================================================
- Name        : bit_utils.h
+ Name        : utils/bit.h
  Author      : Eduardo Ribeiro
- Description : Utils
+ Description : Utils for bit manipulation
  ============================================================================
  */
 
-#ifndef BIT_UTILS_H
-#define BIT_UTILS_H
+#ifndef UTILS_BIT_H
+#define UTILS_BIT_H
 
 #include "types/word_t.h"
 
@@ -123,4 +123,4 @@ word_t get_bits(const word_t source, const uint8_t at, const uint8_t numbits);
  */
 void transpose64(uint64_t a[64]);
 
-#endif
+#endif // UTILS_BIT_H

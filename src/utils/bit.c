@@ -7,7 +7,6 @@
  */
 
 #include "utils/bit.h"
-
 #include "types/word_t.h"
 
 #include <stdint.h>
