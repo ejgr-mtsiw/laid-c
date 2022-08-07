@@ -99,7 +99,7 @@ void calculate_initial_sum(const char* filename, const cover_t* cover);
  * Updates the attributes totals, removing the contribution of the lines
  * covered by column
  */
-oknok_t update_attribute_totals(cover_t* cover, hdf5_dataset_t* line_dataset,
+oknok_t update_attribute_totals(cover_t* cover, dataset_hdf5_t* line_dataset,
 								word_t* column);
 
 /**
