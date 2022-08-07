@@ -6,14 +6,15 @@
  ============================================================================
  */
 
-#include <dataset_hdf5.h>
 #include "dataset.h"
 #include "disjoint_matrix.h"
 #include "jnsq.h"
 #include "set_cover.h"
-#include "utils/timing.h"
+#include "types/dataset_t.h"
 #include "utils/clargs.h"
 #include "utils/sort_r.h"
+#include "utils/timing.h"
+#include <dataset_hdf5.h>
 
 #include <stdlib.h>
 

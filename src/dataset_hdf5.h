@@ -9,7 +9,7 @@
 #ifndef HDF5_DATASET_H
 #define HDF5_DATASET_H
 
-#include "dataset.h"
+#include "types/dataset_t.h"
 #include "types/oknok_t.h"
 
 #include "hdf5.h"

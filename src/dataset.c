@@ -8,7 +8,7 @@
 
 #include "dataset.h"
 
-#include "dataset.h"
+#include "types/dataset_t.h"
 #include "utils/bit.h"
 
 #include <stdbool.h>

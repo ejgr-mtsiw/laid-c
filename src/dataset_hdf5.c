@@ -6,8 +6,9 @@
  ============================================================================
  */
 
-#include <dataset_hdf5.h>
-#include "dataset.h"
+#include "dataset_hdf5.h"
+
+#include "types/dataset_t.h"
 #include "types/oknok_t.h"
 #include "types/word_t.h"
 
