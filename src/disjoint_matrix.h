@@ -14,6 +14,9 @@
 
 #include "hdf5.h"
 
+#include <stdbool.h>
+#include <stdint.h>
+
 /**
  * Calculates the number of lines for the disjoint matrix
  */
