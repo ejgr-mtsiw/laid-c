@@ -30,7 +30,7 @@
  */
 int main(int argc, char** argv)
 {
-	SETUP_TIMING
+	SETUP_TIMING;
 
 	// Timing for the full operation
 	struct timespec main_tick, main_tock;
@@ -51,12 +51,12 @@ int main(int argc, char** argv)
 	// if we already have the matrix in the hdf5 dataset
 	if (!is_matrix_created(args.filename))
 	{
-		TICK
+		TICK;
 
-			/**
-			 * The dataset
-			 */
-			dataset_t dataset;
+		/**
+		 * The dataset
+		 */
+		dataset_t dataset;
 		init_dataset(&dataset);
 
 		/**
@@ -71,29 +71,29 @@ int main(int argc, char** argv)
 		print_dataset_details(stdout, &dataset);
 
 		fprintf(stdout, "Finished loading dataset ");
-		TOCK(stdout)
-		TICK
+		TOCK(stdout);
+		TICK;
 
-			// Sort dataset
-			// We need to know the number of longs in each line of the dataset
-			// so we can't use the standard qsort implementation
-			sort_r(dataset.data, dataset.n_observations,
-				   dataset.n_words * sizeof(word_t), compare_lines_extra,
-				   &dataset.n_words);
+		// Sort dataset
+		// We need to know the number of longs in each line of the dataset
+		// so we can't use the standard qsort implementation
+		sort_r(dataset.data, dataset.n_observations,
+			   dataset.n_words * sizeof(word_t), compare_lines_extra,
+			   &dataset.n_words);
 
 		fprintf(stdout, "\nSorted dataset ");
-		TOCK(stdout)
-		TICK
+		TOCK(stdout);
+		TICK;
 
-			// Remove duplicates
-			fprintf(stdout, "\nRemoving duplicates:\n");
+		// Remove duplicates
+		fprintf(stdout, "\nRemoving duplicates:\n");
 		uint32_t duplicates = remove_duplicates(&dataset);
 		fprintf(stdout, " - %d duplicate(s) removed ", duplicates);
-		TOCK(stdout)
-		TICK
+		TOCK(stdout);
+		TICK;
 
-			// Fill class arrays
-			fprintf(stdout, "\nChecking classes:\n");
+		// Fill class arrays
+		fprintf(stdout, "\nChecking classes:\n");
 
 		if (fill_class_arrays(&dataset) != OK)
 		{
@@ -107,18 +107,18 @@ int main(int argc, char** argv)
 					dataset.n_observations_per_class[i]);
 		}
 
-		TOCK(stdout)
-		TICK
+		TOCK(stdout);
+		TICK;
 
-			// Set JNSQ
-			fprintf(stdout, "\nSetting up JNSQ attributes:\n");
+		// Set JNSQ
+		fprintf(stdout, "\nSetting up JNSQ attributes:\n");
 		unsigned int max_jnsq = add_jnsqs(&dataset);
 		fprintf(stdout, " - Max JNSQ: %d [%d bits] ", max_jnsq,
 				dataset.n_bits_for_jnsqs);
-		TOCK(stdout)
-		TICK
+		TOCK(stdout);
+		TICK;
 
-			unsigned long matrix_lines
+		unsigned long matrix_lines
 			= calculate_number_of_lines_of_disjoint_matrix(&dataset);
 
 		double matrixsize
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
 		}
 
 		fprintf(stdout, "Finished building disjoint matrix ");
-		TOCK(stdout)
+		TOCK(stdout);
 
 		/**
 		 * From this point forward we no longer need the dataset
@@ -147,9 +147,9 @@ int main(int argc, char** argv)
 	cover_t cover;
 	init_cover(&cover);
 
-	TICK
+	TICK;
 
-		fprintf(stdout, "\nApplying set covering algorithm.\n");
+	fprintf(stdout, "\nApplying set covering algorithm.\n");
 	if (calculate_solution(args.filename, &cover) != OK)
 	{
 		return EXIT_FAILURE;
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
 	print_solution(stdout, &cover);
 
 	free_cover(&cover);
-	TOCK(stdout)
+	TOCK(stdout);
 
 	fprintf(stdout, "All done! ");
 

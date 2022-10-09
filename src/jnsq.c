@@ -6,7 +6,7 @@
  ============================================================================
  */
 
-//#include "jnsq.h"
+#include "jnsq.h"
 
 #include "dataset.h"
 #include "types/word_t.h"
