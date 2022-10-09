@@ -8,11 +8,11 @@
 
 #include "set_cover.h"
 
-#include "bit_utils.h"
-#include "hdf5_dataset.h"
-#include "oknok_t.h"
-#include "timing.h"
-#include "word_t.h"
+#include "dataset_hdf5.h"
+#include "types/oknok_t.h"
+#include "types/word_t.h"
+#include "utils/bit.h"
+#include "utils/timing.h"
 
 #include "hdf5.h"
 
@@ -24,7 +24,7 @@ oknok_t calculate_solution(const char* filename, cover_t* cover)
 	oknok_t ret = OK;
 
 	// OPEN LINE DATASET
-	hdf5_dataset_t line_dataset;
+	dataset_hdf5_t line_dataset;
 	ret = hdf5_open_dataset(&line_dataset, filename, DM_LINE_DATA);
 	if (ret != OK)
 	{
@@ -32,7 +32,7 @@ oknok_t calculate_solution(const char* filename, cover_t* cover)
 	}
 
 	// OPEN COLUMN DATASET
-	hdf5_dataset_t column_dataset;
+	dataset_hdf5_t column_dataset;
 	ret = hdf5_open_dataset(&column_dataset, filename, DM_COLUMN_DATA);
 	if (ret != OK)
 	{
@@ -185,7 +185,7 @@ oknok_t load_initial_attribute_totals(uint32_t* attribute_totals,
 									  const char* filename)
 {
 	// LOAD INITIAL ATTRIBUTE TOTALS
-	hdf5_dataset_t attribute_totals_dataset;
+	dataset_hdf5_t attribute_totals_dataset;
 	oknok_t ret = hdf5_open_dataset(&attribute_totals_dataset, filename,
 									DM_ATTRIBUTE_TOTALS);
 	if (ret != OK)
@@ -205,7 +205,7 @@ oknok_t load_initial_attribute_totals(uint32_t* attribute_totals,
 	return OK;
 }
 
-oknok_t update_attribute_totals(cover_t* cover, hdf5_dataset_t* line_dataset,
+oknok_t update_attribute_totals(cover_t* cover, dataset_hdf5_t* line_dataset,
 								word_t* column)
 {
 	oknok_t ret = OK;

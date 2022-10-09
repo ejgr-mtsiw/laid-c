@@ -9,31 +9,13 @@
 #ifndef HDF5_DATASET_H
 #define HDF5_DATASET_H
 
-#include "dataset.h"
-#include "oknok_t.h"
+#include "types/dataset_t.h"
+#include "types/dataset_hdf5_t.h"
+#include "types/oknok_t.h"
 
 #include "hdf5.h"
 
 #include <stdint.h>
-
-typedef struct hdf5_dataset_t
-{
-	/**
-	 * file_id
-	 */
-	hid_t file_id;
-
-	/**
-	 * dataset_id
-	 */
-	hid_t dataset_id;
-
-	/**
-	 * Dimensions
-	 */
-	hsize_t dimensions[2];
-
-} hdf5_dataset_t;
 
 /**
  * The name of the dataset that will store the disjoint matrix
@@ -90,7 +72,7 @@ bool hdf5_file_has_dataset(const char* filename, const char* datasetname);
 /**
  * Opens the file and dataset indicated
  */
-oknok_t hdf5_open_dataset(hdf5_dataset_t* dataset, const char* filename,
+oknok_t hdf5_open_dataset(dataset_hdf5_t* dataset, const char* filename,
 						  const char* datasetname);
 
 /**
@@ -119,7 +101,7 @@ oknok_t hdf5_read_data(hid_t dataset_id, dataset_t* dataset);
  * Reads n_words from index line in the dataset and stores it in the
  * line parameter
  */
-oknok_t hdf5_read_line(const hdf5_dataset_t* dataset, const uint32_t index,
+oknok_t hdf5_read_line(const dataset_hdf5_t* dataset, const uint32_t index,
 					   const uint32_t n_words, word_t* line);
 /**
  * Writes an attribute to the dataset
@@ -140,6 +122,6 @@ void hdf5_get_dataset_dimensions(hid_t dataset_id, hsize_t* dataset_dimensions);
 /**
  * Free resources and closes open connections
  */
-void close_hdf5_dataset(hdf5_dataset_t* dataset);
+void close_hdf5_dataset(dataset_hdf5_t* dataset);
 
 #endif

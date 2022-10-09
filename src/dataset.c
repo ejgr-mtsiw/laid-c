@@ -8,8 +8,8 @@
 
 #include "dataset.h"
 
-#include "bit_utils.h"
-#include "dataset.h"
+#include "types/dataset_t.h"
+#include "utils/bit.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -36,7 +36,6 @@ void init_dataset(dataset_t* dataset)
 uint32_t get_class(const word_t* line, const uint32_t n_attributes,
 				   const uint32_t n_words, const uint8_t n_bits_for_class)
 {
-
 	// How many attributes remain on last word with attributes
 	uint8_t remaining = n_attributes % WORD_BITS;
 
@@ -77,7 +76,6 @@ uint32_t get_class(const word_t* line, const uint32_t n_attributes,
  */
 int compare_lines_extra(const void* a, const void* b, void* n_words)
 {
-
 	const word_t* ula = (const word_t*) a;
 	const word_t* ulb = (const word_t*) b;
 	word_t va		  = 0;
@@ -111,7 +109,6 @@ int compare_lines_extra(const void* a, const void* b, void* n_words)
 bool has_same_attributes(const word_t* a, const word_t* b,
 						 const uint32_t n_attributes)
 {
-
 	// How many words for attributes?
 	uint32_t n_words = (uint32_t) (n_attributes / WORD_BITS)
 		+ (n_attributes % WORD_BITS != 0);
@@ -143,7 +140,6 @@ bool has_same_attributes(const word_t* a, const word_t* b,
 
 uint32_t remove_duplicates(dataset_t* dataset)
 {
-
 	word_t* line = dataset->data;
 	word_t* last = line;
 
@@ -177,7 +173,6 @@ uint32_t remove_duplicates(dataset_t* dataset)
  */
 oknok_t fill_class_arrays(dataset_t* dataset)
 {
-
 	/**
 	 * Array that stores the number of observations for each class
 	 */

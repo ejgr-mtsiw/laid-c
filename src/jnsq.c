@@ -8,9 +8,9 @@
 
 //#include "jnsq.h"
 
-#include "bit_utils.h"
 #include "dataset.h"
-#include "word_t.h"
+#include "types/word_t.h"
+#include "utils/bit.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -19,7 +19,6 @@ void set_jnsq_bits(word_t* line, uint32_t inconsistency,
 				   const uint32_t n_attributes, const uint32_t n_words,
 				   const uint8_t n_bits_for_class)
 {
-
 	// How many attributes remain on last word with attributes
 	uint8_t remaining_attributes = n_attributes % WORD_BITS;
 

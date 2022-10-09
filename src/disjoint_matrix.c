@@ -8,12 +8,12 @@
 
 #include "disjoint_matrix.h"
 
-#include "bit_utils.h"
 #include "dataset.h"
-#include "hdf5_dataset.h"
-#include "oknok_t.h"
-#include "timing.h"
-#include "word_t.h"
+#include "dataset_hdf5.h"
+#include "types/oknok_t.h"
+#include "types/word_t.h"
+#include "utils/bit.h"
+#include "utils/timing.h"
 
 #include "hdf5.h"
 
@@ -74,16 +74,11 @@ oknok_t create_disjoint_matrix_datasets(const hid_t file_id,
 										const dataset_t* dataset)
 {
 	SETUP_TIMING
-	TICK
-	if (create_line_dataset(file_id, dataset) != OK)
-	{
-		return NOK;
-	}
+	TICK if (create_line_dataset(file_id, dataset) != OK) { return NOK; }
 	fprintf(stdout, "\n");
 	TOCK(stdout)
 
-	TICK
-	oknok_t r = create_column_dataset(file_id, dataset);
+	TICK oknok_t r = create_column_dataset(file_id, dataset);
 	fprintf(stdout, "\n");
 	TOCK(stdout)
 
@@ -509,12 +504,12 @@ herr_t write_disjoint_matrix_attributes(const hid_t dataset_id,
 }
 
 herr_t write_line_totals(const hid_t file_id, const uint32_t* data,
-							  const uint32_t n_lines)
+						 const uint32_t n_lines)
 {
 	herr_t ret = 0;
 
 	// Dataset dimensions
-	hsize_t lt_dimensions[1] = { n_lines };
+	hsize_t lt_dimensions[2] = { n_lines, 1 };
 
 	hid_t lt_dataset_space_id = H5Screate_simple(1, lt_dimensions, NULL);
 	if (lt_dataset_space_id < 0)
@@ -552,12 +547,12 @@ out_lt_dataset_space:
 }
 
 herr_t write_attribute_totals(const hid_t file_id, const uint32_t* data,
-								   const uint32_t n_attributes)
+							  const uint32_t n_attributes)
 {
 	herr_t ret = 0;
 
 	// Dataset dimensions
-	hsize_t dimensions[1] = { n_attributes };
+	hsize_t dimensions[2] = { n_attributes, 1 };
 
 	hid_t dataspace_id = H5Screate_simple(1, dimensions, NULL);
 	if (dataspace_id < 0)

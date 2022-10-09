@@ -9,52 +9,13 @@
 #ifndef SET_COVER_H
 #define SET_COVER_H
 
-#include "hdf5_dataset.h"
-#include "oknok_t.h"
-#include "word_t.h"
+#include <dataset_hdf5.h>
+#include "types/cover_t.h"
+#include "types/oknok_t.h"
+#include "types/word_t.h"
 
 #include <stdint.h>
 #include <stdio.h>
-
-typedef struct cover_t
-{
-
-	/**
-	 * Number of attributes
-	 */
-	uint32_t n_attributes;
-
-	/**
-	 * Number of lines of the disjoint matrix
-	 */
-	uint32_t n_matrix_lines;
-
-	/**
-	 * Number of words needed to store a line
-	 */
-	uint32_t n_words_in_a_line;
-
-	/**
-	 * Number of words needed to store a column
-	 */
-	uint32_t n_words_in_a_column;
-
-	/**
-	 * Bit array of covered lines
-	 */
-	word_t* covered_lines;
-
-	/**
-	 * Bit array of selected attributes
-	 */
-	word_t* selected_attributes;
-
-	/**
-	 * Array with the current totals for all attributes
-	 */
-	uint32_t* attribute_totals;
-
-} cover_t;
 
 /**
  * Applies the set cover algorithm to the hdf5 dataset and prints
@@ -99,7 +60,7 @@ void calculate_initial_sum(const char* filename, const cover_t* cover);
  * Updates the attributes totals, removing the contribution of the lines
  * covered by column
  */
-oknok_t update_attribute_totals(cover_t* cover, hdf5_dataset_t* line_dataset,
+oknok_t update_attribute_totals(cover_t* cover, dataset_hdf5_t* line_dataset,
 								word_t* column);
 
 /**
