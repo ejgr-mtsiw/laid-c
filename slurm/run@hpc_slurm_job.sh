@@ -1,14 +1,22 @@
 #!/bin/bash
 
-#SBATCH --job-name=run-laid@hpc
-#SBATCH --time=0:0:5
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+##CHANGE THIS!
 
-# Be sure to request the correct partition to avoid the job to be held in the queue, furthermore
-#	on CIRRUS-B (Minho)  choose for example HPC_4_Days
-#	on CIRRUS-A (Lisbon) choose for example hpc
-#SBATCH --partition=hpc
+RUN_NAME="run-laid-bench_dataset.hd5.original@hpc"
+
+#SBATCH --time=0:10:0
+
+## The operation changes the dataset file used so we need to make a copy
+INPUT_DATASET_FILE="../datasets/bench_dataset.hd5.original"
+OUTPUT_DATASET_FILE="../bench_dataset.h5"
+DATASET_NAME="dados"
+
+## Remove the new dataset file? YES/NO
+REMOVE_DATASET="YES"
+
+## MAYBE CHANGE THIS!
+
+EXE="../bin/laid"
 
 # Used to guarantee that the environment does not have any other loaded module
 module purge
@@ -18,35 +26,35 @@ module load hdf5/1.12.0
 ##module load gcc-8.3
 module load clang/7.0.0
 
-## The operation changes the dataset file used so we need to make a copy
-i_dsetfile="../datasets/bench_dataset.hd5.original"
-o_dsetfile="../bench_dataset.h5"
+## DON'T CHANGE THIS!
 
-#Prepare
-exe="../bin/laid"
-dsetname="dados"
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
 
-## Remove the new dataset file? YES/NO
-remove_dataset="YES"
+# Be sure to request the correct partition to avoid the job to be held in the queue, furthermore
+#	on CIRRUS-B (Minho)  choose for example HPC_4_Days
+#	on CIRRUS-A (Lisbon) choose for example hpc
+#SBATCH --partition=hpc
 
+#SBATCH --job-name=$RUN_NAME
 
 # Run
 echo "=== Copy dataset ==="
-if [ -f "$i_dsetfile" ]; then
-    cp $i_dsetfile $o_dsetfile
+if [ -f "$INPUT_DATASET_FILE" ]; then
+    cp $INPUT_DATASET_FILE $OUTPUT_DATASET_FILE
     
     echo "=== Running ==="
-    if [ -f "$exe" ]; then
-        chmod u+x $exe
-        $exe -d $dsetname -f $o_dsetfile
+    if [ -f "$EXE" ]; then
+        chmod u+x $EXE
+        $EXE -d $DATASET_NAME -f $OUTPUT_DATASET_FILE
     fi
 
-    if [ $remove_dataset == "YES" ]; then
+    if [ $REMOVE_DATASET == "YES" ]; then
         echo "=== Removing dataset ==="
-        rm $o_dsetfile
+        rm $OUTPUT_DATASET_FILE
     fi
 else
-    echo "Input dataset not found!"
+    echo "Input dataset not found! [$INPUT_DATASET_FILE]"
 fi
 
 echo "Finished with job $SLURM_JOBID"
