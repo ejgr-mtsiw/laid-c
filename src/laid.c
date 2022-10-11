@@ -17,6 +17,7 @@
 #include <dataset_hdf5.h>
 
 #include <stdlib.h>
+#include <time.h>
 
 /**
  * Reads dataset attributes from hdf5 file
@@ -33,8 +34,8 @@ int main(int argc, char** argv)
 	SETUP_TIMING;
 
 	// Timing for the full operation
-	struct timespec main_tick, main_tock;
-	clock_gettime(CLOCK_MONOTONIC_RAW, &main_tick);
+	time_t main_tick, main_tock;
+	main_tick = time(0);
 
 	/**
 	 * Command line arguments set by the user
@@ -162,10 +163,8 @@ int main(int argc, char** argv)
 
 	fprintf(stdout, "All done! ");
 
-	clock_gettime(CLOCK_MONOTONIC_RAW, &main_tock);
-	fprintf(stdout, "[%0.3fs]\n",
-			(main_tock.tv_nsec - main_tick.tv_nsec) / 1000000000.0
-				+ (main_tock.tv_sec - main_tick.tv_sec));
+	main_tock = time(0);
+	fprintf(stdout, "[%lds]\n", main_tock - main_tick);
 
 	return EXIT_SUCCESS;
 }
