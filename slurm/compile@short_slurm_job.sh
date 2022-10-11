@@ -16,7 +16,7 @@ module purge
 # Load software modules. Please check session software for the details
 module load hdf5/1.12.0
 ##module load gcc-8.3
-module load clang/7.0.0
+##module load clang/7.0.0
 
 # Compile application
 cd ..
