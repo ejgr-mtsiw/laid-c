@@ -12,6 +12,7 @@
 #include "types/dataset_t.h"
 #include "types/dataset_hdf5_t.h"
 #include "types/oknok_t.h"
+#include "types/word_t.h"
 
 #include "hdf5.h"
 
@@ -96,7 +97,7 @@ oknok_t hdf5_read_attribute(hid_t dataset_id, const char* attribute,
 /**
  * Reads the entire dataset data from the hdf5 file
  */
-oknok_t hdf5_read_data(hid_t dataset_id, dataset_t* dataset);
+oknok_t hdf5_read_data(hid_t dataset_id, word_t* data);
 
 /**
  * Reads n_words from index line in the dataset and stores it in the

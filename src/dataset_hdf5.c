@@ -93,10 +93,30 @@ oknok_t hdf5_read_dataset(const char* filename, const char* datasetname,
 		goto out_close_dataset;
 	}
 
-	ret = hdf5_read_data(hdf5_dataset.dataset_id, dataset);
+	// Number of items in the matrix
+	dataset->n_words = hdf5_dataset.dimensions[1];
+	uint64_t count	 = dataset->n_observations * dataset->n_words;
+
+	// Allocate main buffer
+	// https://vorpus.org/blog/why-does-calloc-exist/
+	/**
+	 * The dataset data
+	 */
+	dataset->data = (word_t*) calloc(count, sizeof(word_t));
+	if (dataset->data == NULL)
+	{
+		fprintf(stderr, "Error allocating dataset\n");
+		ret = NOK;
+		goto out_close_dataset;
+	}
+
+	ret = hdf5_read_data(hdf5_dataset.dataset_id, dataset->data);
 	if (ret != OK)
 	{
 		fprintf(stderr, "Error reading data!\n");
+
+		free(dataset->data);
+		dataset->data = NULL;
 	}
 
 out_close_dataset:
@@ -146,11 +166,6 @@ oknok_t hdf5_read_dataset_attributes(hid_t dataset_id, dataset_t* dataset)
 	dataset->n_classes		  = n_classes;
 	dataset->n_observations	  = n_observations;
 
-	uint32_t total_bits = dataset->n_attributes + dataset->n_bits_for_class;
-	uint32_t n_words = total_bits / WORD_BITS + (total_bits % WORD_BITS != 0);
-
-	dataset->n_words = n_words;
-
 	return OK;
 }
 
@@ -199,35 +214,15 @@ oknok_t hdf5_read_attribute(hid_t dataset_id, const char* attribute,
 	return OK;
 }
 
-oknok_t hdf5_read_data(hid_t dataset_id, dataset_t* dataset)
+oknok_t hdf5_read_data(hid_t dataset_id, word_t* data)
 {
-	// Number of items in the matrix
-	uint64_t count = dataset->n_observations * dataset->n_words;
-
-	// Allocate main buffer
-	// https://vorpus.org/blog/why-does-calloc-exist/
-	/**
-	 * The dataset data
-	 */
-	dataset->data = (word_t*) calloc(count, sizeof(word_t));
-	if (dataset->data == NULL)
-	{
-		fprintf(stderr, "Error allocating dataset\n");
-
-		return NOK;
-	}
-
 	// Fill dataset from hdf5 file
 	herr_t status = H5Dread(dataset_id, H5T_NATIVE_ULONG, H5S_ALL, H5S_ALL,
-							H5P_DEFAULT, dataset->data);
+							H5P_DEFAULT, data);
 
 	if (status < 0)
 	{
 		fprintf(stderr, "Error reading the dataset data\n");
-
-		// Free resources
-		free(dataset->data);
-		dataset->data = NULL;
 		return NOK;
 	}
 
