@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=compile@short
-#SBATCH --time=0:1:0
+##SBATCH --time=0:1:0
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 
@@ -14,9 +14,7 @@
 module purge
 
 # Load software modules. Please check session software for the details
-module load hdf5/1.12.0
-##module load gcc-8.3
-##module load clang/7.0.0
+module load gcc11/libs/hdf5/1.14.0
 
 # Compile application
 cd ..

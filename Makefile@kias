@@ -1,11 +1,11 @@
-CC				:= gcc
+CC				:= cc
 CPPFLAGS		:= -Wall -Wextra -Werror -pedantic-errors -std=c99
 LDFLAGS			:= -L/usr/lib -L/usr/local/lib -lm -lhdf5
 BUILD			:= ./bin
 OBJ_DIR			:= $(BUILD)/objects
 APP_DIR			:= $(BUILD)
 TARGET			:= laid
-INCLUDE			:= -I./src/ -I/usr/local/include -I /usr/include
+INCLUDE			:= -I./src/ -I/usr/local/include -I/usr/include
 SRC_DIRS		:= ./src
 SRC				:= $(shell find $(SRC_DIRS) -name *.c)
 

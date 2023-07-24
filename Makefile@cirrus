@@ -1,4 +1,4 @@
-CC				:= gcc
+CC				:= cc
 CPPFLAGS		:= -Wall -std=c99
 LDFLAGS			:= -lm -lhdf5
 BUILD			:= ./bin

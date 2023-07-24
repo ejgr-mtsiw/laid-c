@@ -4,11 +4,11 @@
 
 RUN_NAME="run-laid-bench_dataset.hd5.original@hpc"
 
-#SBATCH --time=0:10:0
+##SBATCH --time=0:10:0
 
 ## The operation changes the dataset file used so we need to make a copy
-INPUT_DATASET_FILE="../datasets/bench_dataset.hd5.original"
-OUTPUT_DATASET_FILE="../bench_dataset.h5"
+INPUT_DATASET_FILE="../../datasets/bench_dataset.hd5.original"
+OUTPUT_DATASET_FILE="../../datasets/tmp/$(date +%s)_bench_dataset.h5"
 DATASET_NAME="dados"
 
 ## Remove the new dataset file? YES/NO
@@ -18,15 +18,13 @@ REMOVE_DATASET="YES"
 
 EXE="../bin/laid"
 
+## DON'T CHANGE THIS!
+
 # Used to guarantee that the environment does not have any other loaded module
 module purge
 
 # Load software modules. Please check session software for the details
-module load hdf5/1.12.0
-##module load gcc-8.3
-##module load clang/7.0.0
-
-## DON'T CHANGE THIS!
+module load gcc11/libs/hdf5/1.14.0
 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -40,6 +38,8 @@ module load hdf5/1.12.0
 
 # Run
 echo "=== Copy dataset ==="
+echo "cp $INPUT_DATASET_FILE $OUTPUT_DATASET_FILE"
+
 if [ -f "$INPUT_DATASET_FILE" ]; then
     cp $INPUT_DATASET_FILE $OUTPUT_DATASET_FILE
     
@@ -47,10 +47,13 @@ if [ -f "$INPUT_DATASET_FILE" ]; then
     if [ -f "$EXE" ]; then
         chmod u+x $EXE
         $EXE -d $DATASET_NAME -f $OUTPUT_DATASET_FILE
+    else
+        echo "$EXE not found!"
     fi
 
     if [ $REMOVE_DATASET == "YES" ]; then
         echo "=== Removing dataset ==="
+        echo "rm $OUTPUT_DATASET_FILE"
         rm $OUTPUT_DATASET_FILE
     fi
 else

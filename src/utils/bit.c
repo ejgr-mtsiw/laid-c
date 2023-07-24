@@ -1,6 +1,6 @@
 /*
  ============================================================================
- Name        : bit_utils.c
+ Name        : utils/bit.c
  Author      : Eduardo Ribeiro
  Description : Structures and functions to manipulate bits
  ============================================================================
