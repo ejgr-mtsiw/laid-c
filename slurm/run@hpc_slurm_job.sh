@@ -26,6 +26,13 @@ module purge
 # Load software modules. Please check session software for the details
 module load gcc11/libs/hdf5/1.14.0
 
+# Disable warning for mismatched library versions
+# Cirrus.8 has different hdf5 versions on short and hpc partitions
+# even if we load the same module
+# ##Headers are 1.14.0, library is 1.10.5
+HDF5_DISABLE_VERSION_CHECK=1
+export HDF5_DISABLE_VERSION_CHECK
+
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 
