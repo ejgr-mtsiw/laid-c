@@ -2,7 +2,6 @@
 BasedOnStyle: Webkit
 BreakBeforeBraces: Allman
 AlignAfterOpenBracket: Align
-AlignTrailingComments: true
 AlignConsecutiveMacros: Consecutive
 AlignConsecutiveAssignments: Consecutive
 IndentGotoLabels: false
