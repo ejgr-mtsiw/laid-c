@@ -9,6 +9,8 @@
 #include "dataset.h"
 
 #include "types/dataset_t.h"
+#include "types/oknok_t.h"
+#include "types/word_t.h"
 #include "utils/bit.h"
 
 #include <stdbool.h>
@@ -16,12 +18,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/**
- * Initializes a dataset structure
- */
 void init_dataset(dataset_t* dataset)
 {
-	// Store data
 	dataset->data					  = NULL;
 	dataset->n_observations_per_class = NULL;
 	dataset->observations_per_class	  = NULL;
@@ -41,7 +39,7 @@ uint32_t get_class(const word_t* line, const uint32_t n_attributes,
 
 	if (n_bits_for_class == 1 || (remaining + n_bits_for_class <= WORD_BITS))
 	{
-		// All bits on same word
+		// All class bits are on the same word
 
 		// Class starts here
 		uint8_t at = (uint8_t) (WORD_BITS - remaining - n_bits_for_class);
@@ -51,29 +49,27 @@ uint32_t get_class(const word_t* line, const uint32_t n_attributes,
 
 	// Class bits are split between 2 words
 
-	// n bits on penultimate word
+	// Number of class bits on penultimate word
 	uint8_t n_bits_p = WORD_BITS - remaining;
 
-	// n bits on last word
+	// Number of class bits on last word
 	uint8_t n_bits_l = n_bits_for_class - n_bits_p;
 
-	// bits on penultimate word
-	word_t high_b = get_bits(line[n_words - 2], 0, n_bits_p);
+	// Class bits from penultimate word
+	uint32_t high_b = (uint32_t) get_bits(line[n_words - 2], 0, n_bits_p);
 
-	// bits on last word
-	word_t low_b = get_bits(line[n_words - 1], WORD_BITS - n_bits_l, n_bits_l);
+	// Class bits from last word
+	uint32_t low_b = (uint32_t) get_bits(line[n_words - 1],
+										 WORD_BITS - n_bits_l, n_bits_l);
 
 	// Merge bits
 	high_b <<= n_bits_l;
 	high_b |= low_b;
 
+	// Return class
 	return high_b;
 }
 
-/**
- * Compares two lines of the dataset
- * Used to sort the dataset
- */
 int compare_lines_extra(const void* a, const void* b, void* n_words)
 {
 	const word_t* ula = (const word_t*) a;
@@ -85,7 +81,6 @@ int compare_lines_extra(const void* a, const void* b, void* n_words)
 
 	for (uint32_t i = 0; i < n_l; i++)
 	{
-
 		va = ula[i];
 		vb = ulb[i];
 
@@ -103,23 +98,22 @@ int compare_lines_extra(const void* a, const void* b, void* n_words)
 	return 0;
 }
 
-/**
- * Checks if the lines have the same attributes
- */
-bool has_same_attributes(const word_t* a, const word_t* b,
+bool has_same_attributes(const word_t* line_a, const word_t* line_b,
 						 const uint32_t n_attributes)
 {
-	// How many words for attributes?
-	uint32_t n_words = (uint32_t) (n_attributes / WORD_BITS)
-		+ (n_attributes % WORD_BITS != 0);
+	// How many full words are used for attributes?
+	uint32_t n_words = (uint32_t) (n_attributes / WORD_BITS);
 
 	// How many attributes remain on last word
 	uint8_t remaining = n_attributes % WORD_BITS;
 
+	// Current word
+	uint32_t c_word = 0;
+
 	// Check full words
-	for (uint32_t i = 0; i < n_words - !!remaining; i++)
+	for (c_word = 0; c_word < n_words; c_word++)
 	{
-		if (a[i] != b[i])
+		if (line_a[c_word] != line_b[c_word])
 		{
 			return false;
 		}
@@ -127,12 +121,12 @@ bool has_same_attributes(const word_t* a, const word_t* b,
 
 	if (remaining == 0)
 	{
-		// Nothing more to check
+		// Attributes only use full words. Nothing more to check
 		return true;
 	}
 
 	// We need to check last word
-	word_t last_word = get_bits((a[n_words - 1] ^ b[n_words - 1]),
+	word_t last_word = get_bits((line_a[c_word] ^ line_b[c_word]),
 								WORD_BITS - remaining, remaining);
 
 	return (last_word == 0);
@@ -143,11 +137,11 @@ uint32_t remove_duplicates(dataset_t* dataset)
 	word_t* line = dataset->data;
 	word_t* last = line;
 
-	uint32_t n_words		= dataset->n_words;
-	uint32_t n_observations = dataset->n_observations;
-	uint32_t n_uniques		= 1;
+	uint32_t n_words   = dataset->n_words;
+	uint32_t n_obs	   = dataset->n_observations;
+	uint32_t n_uniques = 1;
 
-	for (uint32_t i = 0; i < n_observations - 1; i++)
+	for (uint32_t i = 0; i < n_obs - 1; i++)
 	{
 		NEXT_LINE(line, n_words);
 		if (compare_lines_extra(line, last, &n_words) != 0)
@@ -161,44 +155,13 @@ uint32_t remove_duplicates(dataset_t* dataset)
 		}
 	}
 
-	// Update number of observations
+	// Update number of observations, so the code ignores the remaining lines
 	dataset->n_observations = n_uniques;
-	return n_observations - n_uniques;
+	return (n_obs - n_uniques);
 }
 
-/**
- * Fill the arrays with the number os items per class and also a matrix with
- * references to the lines that belong to each class to simplify the
- * calculation of the disjoint matrix
- */
 oknok_t fill_class_arrays(dataset_t* dataset)
 {
-	/**
-	 * Array that stores the number of observations for each class
-	 */
-	dataset->n_observations_per_class
-		= (uint32_t*) calloc(dataset->n_classes, sizeof(uint32_t));
-	if (dataset->n_observations_per_class == NULL)
-	{
-		fprintf(stderr, "Error allocating n_observations_per_class\n");
-		return NOK;
-	}
-
-	/**
-	 * Matrix that stores the list of observations per class
-	 */
-	// WHATIF: should we replace the static matrix by pointers so each
-	// class has n items? Right now we waste at least half the matrix space
-	// WHATIF: If we reduce the number of possible columns and lines to
-	// 2^32-1 we could use half the memory by storing the line indexes
-	dataset->observations_per_class = (word_t**) calloc(
-		dataset->n_classes * dataset->n_observations, sizeof(word_t*));
-	if (dataset->observations_per_class == NULL)
-	{
-		fprintf(stderr, "Error allocating observations_per_class\n");
-		return NOK;
-	}
-
 	// Number of longs in a line
 	uint32_t n_words = dataset->n_words;
 
@@ -206,50 +169,33 @@ oknok_t fill_class_arrays(dataset_t* dataset)
 	uint32_t n_attributes = dataset->n_attributes;
 
 	// Number of observations
-	uint32_t n_observations = dataset->n_observations;
+	uint32_t n_obs = dataset->n_observations;
 
 	// Number of bits needed to store class
 	uint8_t n_bits_for_class = dataset->n_bits_for_class;
 
-	// Observations per class
-	word_t** observations_per_class = dataset->observations_per_class;
+	// Array that stores the number of observations for each class
+	uint32_t* n_class_obs = dataset->n_observations_per_class;
 
-	// Number of observations per class
-	uint32_t* n_observations_per_class = dataset->n_observations_per_class;
+	// Matrix that stores the list of observations per class
+	word_t** class_obs = dataset->observations_per_class;
 
 	// Current line
 	word_t* line = dataset->data;
 
-	// Last line
-	word_t* last = GET_LAST_LINE(line, n_observations, n_words);
-
-	// This line class
-	uint32_t line_class = 0;
-
-	while (line <= last)
+	// This is the current index
+	for (uint32_t i = 0; i < n_obs; i++)
 	{
-		// for (uint32_t i = 0; i < n_observations; i++) {
-		line_class = get_class(line, n_attributes, n_words, n_bits_for_class);
+		uint32_t lc = get_class(line, n_attributes, n_words, n_bits_for_class);
 
-		observations_per_class[line_class * n_observations
-							   + n_observations_per_class[line_class]]
-			= line;
+		class_obs[lc * n_obs + n_class_obs[lc]] = line;
 
-		n_observations_per_class[line_class]++;
+		n_class_obs[lc]++;
 
 		NEXT_LINE(line, n_words);
 	}
 
 	return OK;
-}
-
-void print_dataset_details(FILE* stream, const dataset_t* dataset)
-{
-	fprintf(stream, "Dataset:\n");
-	fprintf(stream, " - classes = %d ", dataset->n_classes);
-	fprintf(stream, "[%d bits]\n", dataset->n_bits_for_class);
-	fprintf(stream, " - attributes = %d \n", dataset->n_attributes);
-	fprintf(stream, " - observations = %d \n", dataset->n_observations);
 }
 
 void free_dataset(dataset_t* dataset)

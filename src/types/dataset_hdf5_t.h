@@ -6,8 +6,8 @@
  ============================================================================
  */
 
-#ifndef dataset_hdf5_t_H
-#define dataset_hdf5_t_H
+#ifndef HDF5_DATASET_T_H
+#define HDF5_DATASET_T_H
 
 #include "hdf5.h"
 
@@ -30,4 +30,4 @@ typedef struct dataset_hdf5_t
 
 } dataset_hdf5_t;
 
-#endif // dataset_hdf5_t_H
+#endif // HDF5_DATASET_T_H

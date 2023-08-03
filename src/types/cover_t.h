@@ -1,13 +1,13 @@
 /*
  ============================================================================
- Name        : cover_t.h
+ Name        : types/cover_t.h
  Author      : Eduardo Ribeiro
  Description : Datatype representing a cover state
  ============================================================================
  */
 
-#ifndef COVER_T_H
-#define COVER_T_H
+#ifndef TYPES_COVER_T_H
+#define TYPES_COVER_T_H
 
 #include "types/word_t.h"
 
@@ -21,7 +21,7 @@ typedef struct cover_t
 	uint32_t n_attributes;
 
 	/**
-	 * Number of lines of the disjoint matrix
+	 * Total number of lines of the disjoint matrix
 	 */
 	uint32_t n_matrix_lines;
 
@@ -51,4 +51,4 @@ typedef struct cover_t
 	uint32_t* attribute_totals;
 } cover_t;
 
-#endif // COVER_T_H
+#endif // TYPES_COVER_T_H
