@@ -95,9 +95,9 @@ oknok_t generate_steps(const dataset_t* dataset, dm_t* dm)
 
 	for (uint32_t ca = 0; ca < nc - 1; ca++)
 	{
-		for (uint32_t cb = ca + 1; cb < nc; cb++)
+		for (uint32_t ia = 0; ia < nopc[ca]; ia++)
 		{
-			for (uint32_t ia = 0; ia < nopc[ca]; ia++)
+			for (uint32_t cb = ca + 1; cb < nc; cb++)
 			{
 				for (uint32_t ib = 0; ib < nopc[cb]; ib++)
 				{
@@ -139,39 +139,35 @@ oknok_t create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 	// Current output line index
 	uint32_t offset = 0;
 
-	// Current buffer line
-	word_t* bl = buffer;
-
-	// Number of lines currently on the buffer
-	uint8_t n_lines_out = 0;
-
-	for (uint32_t cl = 0; cl < dm->n_matrix_lines; cl++)
+	for (uint32_t cl = 0; cl < dm->n_matrix_lines; cl += N_LINES_OUT)
 	{
-		word_t* la = dm->steps[cl].lineA;
-		word_t* lb = dm->steps[cl].lineB;
-
-		for (uint32_t w = 0; w < dset->n_words; w++)
+		for (uint32_t w = 0; w < dset->n_words; w += 8)
 		{
-			(*bl) = la[w] ^ lb[w];
-			bl++;
+			for (uint32_t cll = cl;
+				 cll < cl + N_LINES_OUT && cll < dm->n_matrix_lines; cll++)
+			{
+				for (uint32_t ww = w; ww < w + 8 && ww < dset->n_words; ww++)
+				{
+
+					word_t* la = dm->steps[cll].lineA;
+					word_t* lb = dm->steps[cll].lineB;
+
+					buffer[(cll - cl) * dset->n_words + ww] = la[ww] ^ lb[ww];
+				}
+			}
 		}
 
-		if (++n_lines_out == N_LINES_OUT)
+		// Number of lines to write
+		uint32_t n_lines_out = N_LINES_OUT;
+		if (cl + N_LINES_OUT > dm->n_matrix_lines)
 		{
-			hdf5_write_n_lines(dset_id, offset, n_lines_out, dset->n_words,
-							   H5T_NATIVE_UINT64, buffer);
-
-			offset += n_lines_out;
-			n_lines_out = 0;
-			bl			= buffer;
+			n_lines_out = dm->n_matrix_lines - cl;
 		}
-	}
 
-	// We may have lines to write
-	if (n_lines_out > 0)
-	{
 		hdf5_write_n_lines(dset_id, offset, n_lines_out, dset->n_words,
 						   H5T_NATIVE_UINT64, buffer);
+
+		offset += n_lines_out;
 	}
 
 	free(buffer);

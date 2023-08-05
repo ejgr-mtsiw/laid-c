@@ -28,6 +28,11 @@ oknok_t get_column(const hid_t dataset, const uint32_t attribute,
 /**
  *
  */
-oknok_t update_attribute_totals(cover_t* cover, dataset_hdf5_t* line_dataset);
+oknok_t update_attribute_totals_add(cover_t* cover,
+									dataset_hdf5_t* line_dataset);
+
+oknok_t update_attribute_totals_sub(cover_t* cover,
+									dataset_hdf5_t* line_dataset,
+									word_t* column);
 
 #endif // SET_COVER_HDF5_H

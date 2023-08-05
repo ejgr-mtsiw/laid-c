@@ -24,7 +24,7 @@
  * Only used in the line dataset, because we already write WORD_BITS columns at
  * a time in the column dataset
  */
-#define N_LINES_OUT 42
+#define N_LINES_OUT 260
 
 /**
  * Calculates the number of lines for the disjoint matrix

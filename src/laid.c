@@ -324,8 +324,8 @@ apply_set_cover:
 		= (word_t*) calloc(cover.n_words_in_a_column, sizeof(word_t));
 
 	// The sum for the attributes
-	cover.attribute_totals
-		= (uint32_t*) calloc(cover.n_attributes, sizeof(uint32_t));
+	cover.attribute_totals = (uint32_t*) calloc(
+		cover.n_words_in_a_line * WORD_BITS, sizeof(uint32_t));
 
 	/**
 	 * Column data to process
@@ -336,7 +336,7 @@ apply_set_cover:
 	/**
 	 * Number of uncovered lines.
 	 */
-	uint32_t n_uncovered_lines = 0;
+	// uint32_t n_uncovered_lines = 0;
 
 	cover.selected_attributes
 		= (word_t*) calloc(cover.n_words_in_a_line, sizeof(word_t));
@@ -344,7 +344,7 @@ apply_set_cover:
 	read_initial_attribute_totals(hdf5_dset.file_id, cover.attribute_totals);
 
 	// No line is covered so far
-	n_uncovered_lines = cover.n_matrix_lines;
+	cover.n_uncovered_lines = cover.n_matrix_lines;
 
 	while (true)
 	{
@@ -361,24 +361,50 @@ apply_set_cover:
 		mark_attribute_as_selected(&cover, best_attribute);
 
 		// Update number of lines remaining
-		n_uncovered_lines -= cover.attribute_totals[best_attribute];
+		cover.n_uncovered_lines -= cover.attribute_totals[best_attribute];
 
 		// If we covered all of them, we can leave.
-		if (n_uncovered_lines == 0)
+		if (cover.n_uncovered_lines == 0)
 		{
 			break;
+		}
+
+		/**
+		 * If this attribute covers more lines than what remains
+		 * to be covered we calculate the sum of the remaining lines.
+		 * If the attribute covers only a few lines we remove the
+		 * contribution of the covered lines.
+		 * The objetive is to reduce the number of lines read
+		 * from the dataset.
+		 */
+		oknok_t sum_uncovered_lines = NOK;
+		if (cover.attribute_totals[best_attribute] > cover.n_uncovered_lines)
+		{
+			// We'll check the uncovered lines
+			sum_uncovered_lines = OK;
 		}
 
 		// Read the column data for the best attribute
 		get_column(column_dset_id.dataset_id, best_attribute,
 				   cover.n_words_in_a_column, column);
 
-		// Update covered lines array
-		update_covered_lines(&cover, column);
+		if (sum_uncovered_lines == OK)
+		{
+			// Update covered lines array
+			update_covered_lines(&cover, column);
 
-		// Calculate the totals for all the attributes
-		// for the remaining uncovered lines
-		update_attribute_totals(&cover, &line_dset_id);
+			// Calculate the totals for all the attributes
+			// for the remaining uncovered lines
+			update_attribute_totals_add(&cover, &line_dset_id);
+		}
+		else
+		{
+			// Remove contribution from newly covered lines
+			update_attribute_totals_sub(&cover, &line_dset_id, column);
+
+			// Update covered lines array
+			update_covered_lines(&cover, column);
+		}
 	}
 
 	print_solution(stdout, &cover);

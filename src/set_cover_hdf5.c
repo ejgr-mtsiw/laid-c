@@ -62,7 +62,8 @@ oknok_t get_column(const hid_t dataset_id, const uint32_t attribute,
 	return OK;
 }
 
-oknok_t update_attribute_totals(cover_t* cover, dataset_hdf5_t* line_dataset)
+oknok_t update_attribute_totals_add(cover_t* cover,
+									dataset_hdf5_t* line_dataset)
 {
 	oknok_t ret = OK;
 
@@ -73,7 +74,7 @@ oknok_t update_attribute_totals(cover_t* cover, dataset_hdf5_t* line_dataset)
 	 * Define the lines of the physical dataset to process
 	 */
 	uint32_t current_line = 0;
-	uint32_t end_line	  = cover->n_matrix_lines;
+	// uint32_t end_line	  = cover->n_matrix_lines;
 
 	// Reset totals
 	memset(cover->attribute_totals, 0, cover->n_attributes * sizeof(uint32_t));
@@ -81,15 +82,16 @@ oknok_t update_attribute_totals(cover_t* cover, dataset_hdf5_t* line_dataset)
 	for (uint32_t w = 0; w < cover->n_words_in_a_column; w++)
 	{
 		word_t attribute_values = cover->covered_lines[w];
-
-		uint8_t last_bit_to_process = 0;
-		if (end_line - current_line < WORD_BITS)
-		{
-			last_bit_to_process = WORD_BITS - (end_line - current_line);
-		}
-
+		/*
+				uint8_t last_bit_to_process = 0;
+				if (end_line - current_line < WORD_BITS)
+				{
+					last_bit_to_process = WORD_BITS - (end_line - current_line);
+				}
+		*/
 		// Check the bits
-		for (int8_t bit = WORD_BITS - 1; bit >= last_bit_to_process;
+		for (int8_t bit = WORD_BITS - 1;
+			 bit >= 0 && current_line < cover->n_matrix_lines;
 			 bit--, current_line++)
 		{
 			if (!BIT_CHECK(attribute_values, bit))
@@ -102,6 +104,54 @@ oknok_t update_attribute_totals(cover_t* cover, dataset_hdf5_t* line_dataset)
 
 				// Increment totals
 				add_line_contribution(cover, line);
+			}
+		}
+	}
+
+	free(line);
+
+	return ret;
+}
+
+oknok_t update_attribute_totals_sub(cover_t* cover,
+									dataset_hdf5_t* line_dataset,
+									word_t* column)
+{
+	oknok_t ret = OK;
+
+	word_t* line = (word_t*) malloc(sizeof(word_t) * cover->n_words_in_a_line);
+	assert(line != NULL);
+
+	/**
+	 * Define the lines of the physical dataset to process
+	 */
+	uint32_t current_line = 0;
+
+	for (uint32_t w = 0; w < cover->n_words_in_a_column; w++)
+	{
+		// cov col
+		//   0   0   0
+		//   0   1   1
+		//   1   0   0
+		//   1   1   0
+
+		word_t attribute_values = ~cover->covered_lines[w] & column[w];
+
+		// Check the bits
+		for (int8_t bit = WORD_BITS - 1;
+			 bit >= 0 && current_line < cover->n_matrix_lines;
+			 bit--, current_line++)
+		{
+			if (BIT_CHECK(attribute_values, bit))
+			{
+				// This line is covered
+
+				// Read line from dataset
+				hdf5_read_line(line_dataset, current_line,
+							   cover->n_words_in_a_line, line);
+
+				// Increment totals
+				sub_line_contribution(cover, line);
 			}
 		}
 	}
