@@ -61,12 +61,12 @@ int main(int argc, char** argv)
 	/**
 	 * Timing for the full operation
 	 */
-	time_t main_tick = time(0), main_tock = 0;
+	SETUP_TIMING_GLOBAL;
 
 	/**
 	 * Local timing structures
 	 */
-	time_t tick = 0, tock = 0;
+	SETUP_TIMING;
 
 	/**
 	 * The dataset
@@ -410,8 +410,7 @@ apply_set_cover:
 	print_solution(stdout, &cover);
 	printf("All done! ");
 
-	main_tock = time(0);
-	printf("[%lds]\n", main_tock - main_tick);
+	PRINT_TIMING_GLOBAL;
 
 	free(column);
 	column = NULL;
