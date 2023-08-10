@@ -47,13 +47,15 @@ module load gcc11/libs/hdf5/1.14.0
 #	on CIRRUS-A (Lisbon) choose for example hpc
 #SBATCH --partition=hpc
 
-## DON'T CHANGE THIS!
+#SBATCH --output=out.%x.%j
+#SBATCH --error=err.%x.%j
 
-# Run
+## DON'T CHANGE THIS!
 
 # Move to base dir
 cd ..
 
+# Run
 if [ -f "$INPUT_DATASET_FILE" ]; then
 	echo "=== Making a copy of the dataset ==="
 	echo "cp $INPUT_DATASET_FILE $OUTPUT_DATASET_FILE"
@@ -71,7 +73,7 @@ if [ -f "$INPUT_DATASET_FILE" ]; then
 
  		echo "$EXE -d $DATASET_NAME -f $OUTPUT_DATASET_FILE"
 		echo
-		$EXE -d $DATASET_NAME -f $OUTPUT_DATASET_FILE
+		time $EXE -d $DATASET_NAME -f $OUTPUT_DATASET_FILE
 	else
 		echo "$EXE not found!"
 	fi
