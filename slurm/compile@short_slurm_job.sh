@@ -2,14 +2,14 @@
 
 #SBATCH --job-name="P1-compile@short"
 
+#SBATCH --output=out.%x.%j
+##SBATCH --error=err.%x.%j
+
 ##SBATCH --time=0:1:0
 
 #SBATCH --ntasks=1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=1
-
-#SBATCH --output=out.%x.%j
-#SBATCH --error=err.%x.%j
 
 # Be sure to request the correct partition to avoid the job to be held in the queue, furthermore
 #	on CIRRUS-B (Minho)  choose for example HPC_4_Days
