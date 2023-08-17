@@ -21,7 +21,7 @@ DATASET_DIR="../datasets"
 DATASET_TMP_DIR="../datasets/tmp"
 
 ## The operation changes the dataset file used so we need to make a copy
-OUTPUT_DATASET_FILE="$DATASET_TMP_DIR/$(date +%s)_$DATASET_FILE"
+OUTPUT_DATASET_FILE="$DATASET_TMP_DIR/$(date +%s%N)_$DATASET_FILE"
 INPUT_DATASET_FILE="$DATASET_DIR/$DATASET_FILE"
 
 ## Remove the new dataset file? YES/NO
