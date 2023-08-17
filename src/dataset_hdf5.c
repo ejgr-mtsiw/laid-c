@@ -24,17 +24,9 @@
 oknok_t hdf5_open_dataset(const char* filename, const char* datasetname,
 						  dataset_hdf5_t* dataset)
 {
-	// Setup file access template
-	hid_t acc_tpl = H5Pcreate(H5P_FILE_ACCESS);
-	assert(acc_tpl != NOK);
-
 	// Open the file
-	hid_t f_id = H5Fopen(filename, H5F_ACC_RDWR, acc_tpl);
+	hid_t f_id = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
 	assert(f_id != NOK);
-
-	// Release file-access template
-	herr_t ret = H5Pclose(acc_tpl);
-	assert(ret != NOK);
 
 	// Open the dataset
 	hid_t dset_id = H5Dopen(f_id, datasetname, H5P_DEFAULT);
@@ -61,17 +53,12 @@ hid_t hdf5_create_dataset(const hid_t file_id, const char* name,
 	hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
 	assert(dcpl_id != NOK);
 
-	// Create a dataset access property list
-	hid_t dapl_id = H5Pcreate(H5P_DATASET_ACCESS);
-	assert(dapl_id != NOK);
-
 	// Create the dataset
 	hid_t dset_id = H5Dcreate(file_id, name, datatype, filespace_id,
-							  H5P_DEFAULT, dcpl_id, dapl_id);
+							  H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
 	assert(dset_id != NOK);
 
 	// Close resources
-	H5Pclose(dapl_id);
 	H5Pclose(dcpl_id);
 	H5Sclose(filespace_id);
 
@@ -358,25 +345,11 @@ oknok_t hdf5_write_to_dataset(const hid_t dset_id, const hsize_t offset[2],
 	hid_t memspace_id = H5Screate_simple(2, count, NULL);
 	assert(memspace_id != NOK);
 
-	// set up the collective transfer properties list
-	hid_t xfer_plist = H5Pcreate(H5P_DATASET_XFER);
-	assert(xfer_plist != NOK);
-
-	/**
-	 * H5FD_MPIO_COLLECTIVE transfer mode is not favourable:
-	 * https://docs.hdfgroup.org/hdf5/rfc/coll_ind_dd6.pdf
-	 */
-	/*
-	err = H5Pset_dxpl_mpio(xfer_plist, H5FD_MPIO_COLLECTIVE);
-	assert(err != NOK);
-	*/
-
 	// Write buffer to dataset
-	err = H5Dwrite(dset_id, datatype, memspace_id, filespace_id, xfer_plist,
+	err = H5Dwrite(dset_id, datatype, memspace_id, filespace_id, H5P_DEFAULT,
 				   buffer);
 	assert(err != NOK);
 
-	H5Pclose(xfer_plist);
 	H5Sclose(memspace_id);
 	H5Sclose(filespace_id);
 
