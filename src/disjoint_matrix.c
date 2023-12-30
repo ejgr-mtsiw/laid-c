@@ -136,24 +136,23 @@ oknok_t create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 		= (word_t*) malloc(N_LINES_OUT * dset->n_words * sizeof(word_t));
 	assert(buffer != NULL);
 
+	// Start of output buffer
+	word_t* start_buffer = buffer;
+
 	// Current output line index
 	uint32_t offset = 0;
 
 	for (uint32_t cl = 0; cl < dm->n_matrix_lines; cl += N_LINES_OUT)
 	{
-		for (uint32_t w = 0; w < dset->n_words; w += 8)
+		for (uint32_t cll = cl;
+			 cll < cl + N_LINES_OUT && cll < dm->n_matrix_lines; cll++)
 		{
-			for (uint32_t cll = cl;
-				 cll < cl + N_LINES_OUT && cll < dm->n_matrix_lines; cll++)
+			for (uint32_t w = 0; w < dset->n_words; w++, buffer++)
 			{
-				for (uint32_t ww = w; ww < w + 8 && ww < dset->n_words; ww++)
-				{
+				word_t* la = dm->steps[cll].lineA;
+				word_t* lb = dm->steps[cll].lineB;
 
-					word_t* la = dm->steps[cll].lineA;
-					word_t* lb = dm->steps[cll].lineB;
-
-					buffer[(cll - cl) * dset->n_words + ww] = la[ww] ^ lb[ww];
-				}
+				(*buffer) = la[w] ^ lb[w];
 			}
 		}
 
@@ -165,9 +164,10 @@ oknok_t create_line_dataset(const dataset_hdf5_t* hdf5_dset,
 		}
 
 		hdf5_write_n_lines(dset_id, offset, n_lines_out, dset->n_words,
-						   H5T_NATIVE_UINT64, buffer);
+						   H5T_NATIVE_UINT64, start_buffer);
 
 		offset += n_lines_out;
+		buffer = start_buffer;
 	}
 
 	free(buffer);
